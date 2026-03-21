@@ -29,3 +29,5 @@ DEVELOPMENT.md
 /blob-report/
 /playwright/.cache/
 /playwright/.auth
+.idea/
+.idea
