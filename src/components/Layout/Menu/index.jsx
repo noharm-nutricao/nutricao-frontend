@@ -160,6 +160,14 @@ export default function Menu({ segments }) {
       permission: [Permission.READ_PRESCRIPTION],
     },
     {
+      key: "/nutricional/painel",
+      link: "/nutricional/painel",
+      label: "Painel Nutricional",
+      icon: <HeartOutlined />,
+      id: "gtm-lnk-nutritional",
+      permission: [Permission.READ_PRESCRIPTION],
+    },
+    {
       key: "/relatorios",
       link: "/relatorios",
       label: t("menu.reports"),
@@ -227,15 +235,6 @@ export default function Menu({ segments }) {
           id: "gtm-lnk-medicamentos",
           permission: [Permission.READ_PRESCRIPTION],
         },
-        {
-          key: "/nutricional/painel",
-          link: "/nutricional/painel",
-          label: "Painel Nutricional",
-          icon: <HeartOutlined />,
-          id: "gtm-lnk-nutritional",
-          permission: [Permission.READ_PRESCRIPTION],
-        },
-
         {
           key: "/configuracoes/usuario",
           link: "/configuracoes/usuario",
