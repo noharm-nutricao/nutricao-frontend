@@ -37,6 +37,7 @@ import {
   SearchOutlined,
   BookOutlined,
   FormOutlined,
+  HeartOutlined,
 } from "@ant-design/icons";
 import { Menu as Navigator } from "antd";
 
@@ -224,6 +225,14 @@ export default function Menu({ segments }) {
           label: t("menu.medications"),
           icon: <MedicineBoxOutlined />,
           id: "gtm-lnk-medicamentos",
+          permission: [Permission.READ_PRESCRIPTION],
+        },
+        {
+          key: "/nutricional/painel",
+          link: "/nutricional/painel",
+          label: "Painel Nutricional",
+          icon: <HeartOutlined />,
+          id: "gtm-lnk-nutritional",
           permission: [Permission.READ_PRESCRIPTION],
         },
 
