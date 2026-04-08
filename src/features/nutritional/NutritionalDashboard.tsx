@@ -15,12 +15,14 @@ import {
 import styled from "styled-components";
 
 import { useAppDispatch, useAppSelector } from "src/store";
+import { selectFila1, selectFila5 } from "src/store/selectors/nutritionalSelectors";
 import { FeatureService } from "src/services/FeatureService";
 import Feature from "src/models/Feature";
 import { PageHeader } from "src/styles/PageHeader.style";
 import { PageCard } from "styles/Utils.style";
 import {
   acknowledgePatient,
+  setFiltFila as setFiltFilaAction,
   NutritionalPatient,
   AlaType,
   AcknowledgedEntry,
@@ -252,10 +254,9 @@ function matchFila(
   _acknowledged: Record<number, AcknowledgedEntry>
 ): boolean {
   if (!filtFila || filtFila === "all") return true;
-  if (filtFila === "glim") return !p.glim_diag;
-  if (filtFila === "24h") return p.haval > 18 || !p.glim_diag;
-  if (filtFila === "desg") return p.glim_diag === "grave";
-  if (filtFila === "d7") return p.d7;
+  if (filtFila === "FILA1") return (p.sev === "cr" || p.sev === "al") && p.haval > 18;
+  if (filtFila === "FILA2") return p.haval > 18;
+  if (filtFila === "FILA5") return p.d7 === true;
   return true;
 }
 
@@ -263,16 +264,18 @@ function matchFila(
 
 export function NutritionalDashboard() {
   const dispatch = useAppDispatch();
-  const { patients, acknowledged } = useAppSelector(
+  const { patients, acknowledged, filtFila } = useAppSelector(
     (state: any) => state.nutritional
   );
 
   const [viewMode, setViewMode] = useState<"grid" | "lista">("grid");
   const [filtAla, setFiltAla] = useState("all");
   const [filtSev, setFiltSev] = useState("");
-  const [filtFila, setFiltFila] = useState("");
   const [sortAsc, setSortAsc] = useState(false);
   const [modalPatient, setModalPatient] = useState<NutritionalPatient | null>(null);
+
+  const fila1Patients = useAppSelector(selectFila1);
+  const fila5Patients = useAppSelector(selectFila5);
   const [modalTab, setModalTab] = useState("vis");
 
   // ── Filtered + sorted list ──────────────────────────────────────────────
@@ -368,10 +371,15 @@ export function NutritionalDashboard() {
         filtAla={filtAla}
         filtSev={filtSev}
         filtFila={filtFila}
+        countsFila={{
+          FILA1: fila1Patients.length,
+          FILA2: patients.filter((p: NutritionalPatient) => p.haval > 18).length,
+          FILA5: fila5Patients.length,
+        }}
         sortAsc={sortAsc}
         onAlaChange={setFiltAla}
         onSevChange={setFiltSev}
-        onFilaChange={setFiltFila}
+        onFilaChange={(val) => dispatch(setFiltFilaAction(val))}
         onSortToggle={() => setSortAsc((v) => !v)}
       />
 
@@ -392,7 +400,7 @@ export function NutritionalDashboard() {
             $clickable={!!sev}
             onClick={() => {
               if (sev) {
-                setFiltFila("");
+                dispatch(setFiltFilaAction(""));
                 setFiltSev(filtSev === sev ? "" : sev);
               }
             }}
@@ -511,8 +519,8 @@ export function NutritionalDashboard() {
                       p.haval > 48
                         ? "#c41e3a"
                         : p.haval > 24
-                        ? "#d4931a"
-                        : "#3a9c6e";
+                          ? "#d4931a"
+                          : "#3a9c6e";
 
                     const instTags = p.inst.slice(0, 3);
                     const instMore = p.inst.length > 3 ? p.inst.length - 3 : 0;
@@ -586,6 +594,20 @@ export function NutritionalDashboard() {
                             <div style={{ fontSize: 11, color: "#8c8c8c" }}>
                               {FeatureService.has(Feature.HIDE_NAMES) ? "**a" : `${p.idade}a`} · {p.dias}d · #{p.pri} fila
                             </div>
+                            {(p.dados_incompletos || p.nrs_completo === false) && (
+                              <div style={{ marginTop: 6, display: "flex", flexDirection: "column", gap: 4, alignItems: "flex-start" }}>
+                                {p.dados_incompletos && (
+                                  <span style={{ display: "inline-block", padding: "1px 5px", borderRadius: "9px", fontSize: "9px", fontWeight: 600, background: "#fffbe6", color: "#d48806", border: "1px solid #ffe58f" }}>
+                                    ⚠️ APACHE/SOFA necessários
+                                  </span>
+                                )}
+                                {p.nrs_completo === false && (
+                                  <span style={{ display: "inline-block", padding: "1px 5px", borderRadius: "9px", fontSize: "9px", fontWeight: 600, background: "#fff1f0", color: "#cf1322", border: "1px solid #ffa39e" }}>
+                                    ❌ Pontuação incompleta
+                                  </span>
+                                )}
+                              </div>
+                            )}
                           </ListCell>
 
                           {/* Campo 1 · Risco */}
@@ -611,8 +633,8 @@ export function NutritionalDashboard() {
                                     p.glim_diag === "grave"
                                       ? "#7f0d1f"
                                       : p.glim_diag === "mod"
-                                      ? "#a32d2d"
-                                      : "#3a9c6e",
+                                        ? "#a32d2d"
+                                        : "#3a9c6e",
                                   fontWeight: 500,
                                 }}
                               >
@@ -637,8 +659,8 @@ export function NutritionalDashboard() {
                                     item.t === "lab"
                                       ? { bg: "#fcebeb", color: "#a32d2d", border: "#f09595" }
                                       : item.t === "clin"
-                                      ? { bg: "#fdf3dc", color: "#b7770d", border: "#fac775" }
-                                      : { bg: "#f0eeff", color: "#3c3489", border: "#b39ddb" };
+                                        ? { bg: "#fdf3dc", color: "#b7770d", border: "#fac775" }
+                                        : { bg: "#f0eeff", color: "#3c3489", border: "#b39ddb" };
                                   return (
                                     <Tooltip key={i} title={item.d}>
                                       <InlineBadge

@@ -51,6 +51,8 @@ export interface NutritionalPatient {
   alergia: string | null;
   alOk: boolean;
   d7: boolean;
+  dados_incompletos?: boolean;
+  nrs_completo?: boolean;
   hist: HistEntry[];
 }
 
@@ -62,6 +64,7 @@ export interface AcknowledgedEntry {
 interface NutritionalState {
   patients: NutritionalPatient[];
   acknowledged: Record<number, AcknowledgedEntry>;
+  filtFila: string;
 }
 
 const MOCK_PATIENTS: NutritionalPatient[] = [
@@ -200,6 +203,8 @@ const MOCK_PATIENTS: NutritionalPatient[] = [
     alergia: null,
     alOk: true,
     d7: false,
+    dados_incompletos: true,
+    nrs_completo: false,
     hist: [],
   },
   {
@@ -257,7 +262,7 @@ const MOCK_PATIENTS: NutritionalPatient[] = [
     npo: 0,
     peso: "88kg",
     imc: 26.3,
-    haval: 14,
+    haval: 30,
     glim_diag: "nd",
     glim_fen: [],
     glim_etiol: [],
@@ -300,6 +305,7 @@ const MOCK_PATIENTS: NutritionalPatient[] = [
 const initialState: NutritionalState = {
   patients: MOCK_PATIENTS,
   acknowledged: {},
+  filtFila: "",
 };
 
 const nutritionalSlice = createSlice({
@@ -377,6 +383,9 @@ const nutritionalSlice = createSlice({
         patient.inst = patient.inst.filter((i) => !i.d.includes("Alergia"));
       }
     },
+    setFiltFila(state, action: { payload: string }) {
+      state.filtFila = action.payload;
+    },
     reset() {
       return { ...initialState, acknowledged: {} };
     },
@@ -389,6 +398,7 @@ export const {
   saveAval,
   confirmAllergy,
   acknowledgePatient,
+  setFiltFila,
   reset,
 } = nutritionalSlice.actions;
 export default nutritionalSlice.reducer;
