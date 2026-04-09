@@ -1,4 +1,7 @@
-import { createSlice } from "@reduxjs/toolkit";
+import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+import { AxiosError } from "axios";
+
+import api from "services/api";
 
 export type AlaType = "UTI" | "B" | "C";
 export type SeverityType = "cr" | "al" | "md" | "bx";
@@ -62,6 +65,8 @@ export interface AcknowledgedEntry {
 interface NutritionalState {
   patients: NutritionalPatient[];
   acknowledged: Record<number, AcknowledgedEntry>;
+  loading: boolean;
+  error: string | null;
 }
 
 const MOCK_PATIENTS: NutritionalPatient[] = [
@@ -298,9 +303,32 @@ const MOCK_PATIENTS: NutritionalPatient[] = [
 ];
 
 const initialState: NutritionalState = {
-  patients: MOCK_PATIENTS,
+  patients: [],
   acknowledged: {},
+  loading: false,
+  error: null,
 };
+
+export const fetchPatients = createAsyncThunk(
+  "nutritional/fetchPatients",
+  async (params: { setor?: number } = {}, thunkAPI) => {
+    try {
+      const response = await api.nutritional.getPatients(params);
+      const payload = response.data;
+      // suporta { data: [...] } e array direto
+      return (Array.isArray(payload) ? payload : payload?.data ?? []) as NutritionalPatient[];
+    } catch (err) {
+      const axiosErr = err as AxiosError<{ error?: string; message?: string }>;
+      const status = axiosErr.response?.status;
+      const msg =
+        axiosErr.response?.data?.error ??
+        axiosErr.response?.data?.message ??
+        axiosErr.message ??
+        "Erro ao carregar pacientes";
+      return thunkAPI.rejectWithValue(status ? `${status} — ${msg}` : msg);
+    }
+  }
+);
 
 const nutritionalSlice = createSlice({
   name: "nutritional",
@@ -380,6 +408,21 @@ const nutritionalSlice = createSlice({
     reset() {
       return { ...initialState, acknowledged: {} };
     },
+  },
+  extraReducers(builder) {
+    builder
+      .addCase(fetchPatients.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchPatients.fulfilled, (state, action) => {
+        state.loading = false;
+        state.patients = action.payload;
+      })
+      .addCase(fetchPatients.rejected, (state, action) => {
+        state.loading = false;
+        state.error = (action.payload as string) ?? action.error.message ?? "Erro desconhecido";
+      });
   },
 });
 

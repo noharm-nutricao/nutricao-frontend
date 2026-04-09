@@ -1,9 +1,11 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
+  Alert,
   Tag,
   Space,
   Button,
   Segmented,
+  Spin,
   Tooltip,
 } from "antd";
 import {
@@ -21,6 +23,7 @@ import { PageHeader } from "src/styles/PageHeader.style";
 import { PageCard } from "styles/Utils.style";
 import {
   acknowledgePatient,
+  fetchPatients,
   NutritionalPatient,
   AlaType,
   AcknowledgedEntry,
@@ -261,9 +264,11 @@ function matchFila(
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
+const REFRESH_INTERVAL = 15 * 60 * 1000; // 15 minutos
+
 export function NutritionalDashboard() {
   const dispatch = useAppDispatch();
-  const { patients, acknowledged } = useAppSelector(
+  const { patients, acknowledged, loading, error } = useAppSelector(
     (state: any) => state.nutritional
   );
 
@@ -274,6 +279,13 @@ export function NutritionalDashboard() {
   const [sortAsc, setSortAsc] = useState(false);
   const [modalPatient, setModalPatient] = useState<NutritionalPatient | null>(null);
   const [modalTab, setModalTab] = useState("vis");
+
+  // ── Auto-fetch + 15-min refresh ─────────────────────────────────────────
+  useEffect(() => {
+    dispatch(fetchPatients());
+    const interval = setInterval(() => dispatch(fetchPatients()), REFRESH_INTERVAL);
+    return () => clearInterval(interval);
+  }, [dispatch]);
 
   // ── Filtered + sorted list ──────────────────────────────────────────────
   const filtered = useMemo(() => {
@@ -336,6 +348,14 @@ export function NutritionalDashboard() {
   // ── Render ──────────────────────────────────────────────────────────────
   return (
     <>
+      {error && (
+        <Alert
+          type="warning"
+          message={`Não foi possível buscar dados da API: ${error}`}
+          closable
+          style={{ marginBottom: 12 }}
+        />
+      )}
       <PageHeader>
         <div>
           <h1 className="page-header-title">Painel Nutricional</h1>
@@ -410,6 +430,11 @@ export function NutritionalDashboard() {
       </SummaryBar>
 
       {/* Content */}
+      {loading && !patients.length && (
+        <div style={{ display: "flex", justifyContent: "center", padding: 80 }}>
+          <Spin size="large" />
+        </div>
+      )}
       {viewMode === "grid" ? (
         <div>
           {alaKeys.map((ak) => {

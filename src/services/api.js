@@ -937,6 +937,16 @@ api.auth.switchToSchema = (params = {}) =>
     ...setHeaders(),
   });
 
+/**
+ * Nutritional
+ */
+api.nutritional = {};
+api.nutritional.getPatients = (params = {}) =>
+  instance.get("/nutritional/patients", {
+    params,
+    ...setHeaders(),
+  });
+
 /** GENERAL */
 api.general = {};
 const getVersion = () =>
