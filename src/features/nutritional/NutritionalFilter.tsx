@@ -106,9 +106,10 @@ const ALA_COLORS: Record<AlaType, string> = {
 };
 
 const FILA_BTNS = [
-  { key: "FILA1", label: "Alta Prioridade" },
-  { key: "FILA2", label: "Avaliar 24h" },
-  { key: "FILA5", label: "D7 pendente" },
+  { key: "glim", label: "GLIM pendente" },
+  { key: "24h", label: "Avaliar 24h" },
+  { key: "desg", label: "Desnut. grave" },
+  { key: "d7", label: "D7 pendente" },
 ];
 
 const RISCO_BTNS = [
@@ -122,7 +123,6 @@ interface NutritionalFilterProps {
   filtAla: string;
   filtSev: string;
   filtFila: string;
-  countsFila: Record<string, number>;
   sortAsc: boolean;
   onAlaChange: (ala: string) => void;
   onSevChange: (sev: string) => void;
@@ -134,7 +134,6 @@ export function NutritionalFilter({
   filtAla,
   filtSev,
   filtFila,
-  countsFila,
   sortAsc,
   onAlaChange,
   onSevChange,
@@ -191,17 +190,6 @@ export function NutritionalFilter({
               onClick={() => handleFilaClick(key)}
             >
               {label}
-              <span style={{
-                background: filtFila === key ? '#7e57c2' : '#e0e0e0',
-                color: filtFila === key ? '#fff' : '#696766',
-                borderRadius: '10px',
-                padding: '1px 6px',
-                fontSize: '10px',
-                marginLeft: '6px',
-                fontWeight: 'bold'
-              }}>
-                {countsFila[key] || 0}
-              </span>
             </FilterBtn>
           ))}
         </FilterGroup>
