@@ -1,3 +1,8 @@
+/**
+ * NutritionalDashboard – Painel principal de acompanhamento nutricional.
+ * Integra filas de prioridade, badges de alerta e seletores Redux.
+ * Issue #33 – US-BE-06
+ */
 import { useMemo, useState } from "react";
 import {
   Tag,

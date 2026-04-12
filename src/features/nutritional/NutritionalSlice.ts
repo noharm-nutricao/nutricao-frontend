@@ -1,3 +1,8 @@
+/**
+ * NutritionalSlice – Estado global Redux para o módulo de nutrição.
+ * Gerencia pacientes, filtros de fila e dados de acompanhamento.
+ * Issue #33 – US-BE-06
+ */
 import { createSlice } from "@reduxjs/toolkit";
 
 export type AlaType = "UTI" | "B" | "C";

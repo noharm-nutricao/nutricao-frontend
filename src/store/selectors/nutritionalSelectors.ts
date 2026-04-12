@@ -1,3 +1,9 @@
+/**
+ * Seletores Redux para filtragem de filas de prioridade nutricional.
+ * selectFila1: pacientes críticos/altos com avaliação atrasada (>18h).
+ * selectFila5: pacientes com flag D7 ativa.
+ * Issue #33 – US-BE-06
+ */
 import { createSelector } from '@reduxjs/toolkit';
 import { IRootState } from '../index';
 
