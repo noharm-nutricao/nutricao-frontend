@@ -1,7 +1,7 @@
 /**
  * NutritionalFilter – Barra de filtros do Painel Nutricional.
  * Contém os seletores de Ala, Fila de prioridade (1, 2 e 5) e Risco.
- * Issue #33 – US-BE-06
+ * Issue #33 – US-FE-06
  */
 import { Affix } from "antd";
 import { useState } from "react";
