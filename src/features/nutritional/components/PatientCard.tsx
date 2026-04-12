@@ -206,10 +206,10 @@ export function PatientCard({
     p.glim_diag === "grave"
       ? "#7f0d1f"
       : p.glim_diag === "mod"
-      ? "#a32d2d"
-      : p.glim_diag === "nd"
-      ? "#3a9c6e"
-      : "#d4931a";
+        ? "#a32d2d"
+        : p.glim_diag === "nd"
+          ? "#3a9c6e"
+          : "#d4931a";
 
   const instSlice = p.inst.slice(0, 3);
   const instMore = p.inst.length > 3 ? p.inst.length - 3 : 0;
@@ -251,6 +251,20 @@ export function PatientCard({
         </PatientName>
         <PatientMeta>
           {FeatureService.has(Feature.HIDE_NAMES) ? "**a" : `${p.idade}a`} · {p.dias}d · #{p.pri}
+          {(p.dados_incompletos || p.nrs_completo === false) && (
+            <div style={{ marginTop: 6, display: "flex", flexDirection: "column", gap: 4, alignItems: "flex-start" }}>
+              {p.dados_incompletos && (
+                <Badge $bg="#fffbe6" $color="#d48806" $border="#ffe58f">
+                  ⚠️ APACHE/SOFA necessários
+                </Badge>
+              )}
+              {p.nrs_completo === false && (
+                <Badge $bg="#fff1f0" $color="#cf1322" $border="#ffa39e">
+                  ❌ Pontuação incompleta
+                </Badge>
+              )}
+            </div>
+          )}
         </PatientMeta>
 
         {/* Campo 1 – Risco nutricional */}
