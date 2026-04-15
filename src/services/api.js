@@ -169,6 +169,12 @@ api.exams.getExamTypes = (params = {}) =>
     ...setHeaders(),
   });
 
+/**
+ * Nutritional.
+ *
+ */
+// api.nutritional = {};
+
 const getExams = (bearerToken, admissionNumber, params = {}) =>
   instance.get(`${endpoints.exams}/${admissionNumber}`, {
     params,
