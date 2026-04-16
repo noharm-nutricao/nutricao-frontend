@@ -6,14 +6,22 @@ import { get } from "styles/utils";
 
 const getAlertColor = (type) => {
   switch (type) {
-    case "green":
-      return "#7CB342";
-    case "yellow":
-      return "#FDD835";
-    case "orange":
-      return "#FB8C00";
+    case "cr":
+      return "#ef4444";
+    case "al":
+      return "#f97316";
+    case "md":
+      return "#eab308";
+    case "bx":
+      return "#22c55e";
     case "red":
-      return "#E53935";
+      return "#ef4444";
+    case "orange":
+      return "#f97316";
+    case "yellow":
+      return "#eab308";
+    case "green":
+      return "#22c55e";
     default:
       return "#959595";
   }
