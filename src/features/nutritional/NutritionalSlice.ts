@@ -1,8 +1,6 @@
-/**
- * NutritionalSlice – Estado global Redux para o módulo de nutrição.
- * Gerencia pacientes, filtros de fila e dados de acompanhamento.
- * Issue #33 – US-FE-06
- */
+import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+import { AxiosError } from "axios";
+import api from "services/api";
 import { createSlice } from "@reduxjs/toolkit";
 
 export type AlaType = "UTI" | "B" | "C";
@@ -69,6 +67,8 @@ export interface AcknowledgedEntry {
 interface NutritionalState {
   patients: NutritionalPatient[];
   acknowledged: Record<number, AcknowledgedEntry>;
+  loading: boolean;
+  error: string | null;
   filtFila: string;
 }
 
@@ -308,10 +308,33 @@ const MOCK_PATIENTS: NutritionalPatient[] = [
 ];
 
 const initialState: NutritionalState = {
-  patients: MOCK_PATIENTS,
+  patients: [],
   acknowledged: {},
+  loading: false,
+  error: null,
   filtFila: "",
 };
+
+export const fetchPatients = createAsyncThunk(
+  "nutritional/fetchPatients",
+  async (params: { setor?: number } = {}, thunkAPI) => {
+    try {
+      const response = await api.nutritional.getPatients(params);
+      const payload = response.data;
+      // suporta { data: [...] } e array direto
+      return (Array.isArray(payload) ? payload : payload?.data ?? []) as NutritionalPatient[];
+    } catch (err) {
+      const axiosErr = err as AxiosError<{ error?: string; message?: string }>;
+      const status = axiosErr.response?.status;
+      const msg =
+        axiosErr.response?.data?.error ??
+        axiosErr.response?.data?.message ??
+        axiosErr.message ??
+        "Erro ao carregar pacientes";
+      return thunkAPI.rejectWithValue(status ? `${status} — ${msg}` : msg);
+    }
+  }
+);
 
 const nutritionalSlice = createSlice({
   name: "nutritional",
@@ -394,6 +417,21 @@ const nutritionalSlice = createSlice({
     reset() {
       return { ...initialState, acknowledged: {} };
     },
+  },
+  extraReducers(builder) {
+    builder
+      .addCase(fetchPatients.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchPatients.fulfilled, (state, action) => {
+        state.loading = false;
+        state.patients = action.payload;
+      })
+      .addCase(fetchPatients.rejected, (state, action) => {
+        state.loading = false;
+        state.error = (action.payload as string) ?? action.error.message ?? "Erro desconhecido";
+      });
   },
 });
 
