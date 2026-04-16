@@ -1,7 +1,7 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import { AxiosError } from "axios";
-
 import api from "services/api";
+import { createSlice } from "@reduxjs/toolkit";
 
 export type AlaType = "UTI" | "B" | "C";
 export type SeverityType = "cr" | "al" | "md" | "bx";
@@ -54,6 +54,8 @@ export interface NutritionalPatient {
   alergia: string | null;
   alOk: boolean;
   d7: boolean;
+  dados_incompletos?: boolean;
+  nrs_completo?: boolean;
   hist: HistEntry[];
 }
 
@@ -67,6 +69,7 @@ interface NutritionalState {
   acknowledged: Record<number, AcknowledgedEntry>;
   loading: boolean;
   error: string | null;
+  filtFila: string;
 }
 
 const MOCK_PATIENTS: NutritionalPatient[] = [
@@ -205,6 +208,8 @@ const MOCK_PATIENTS: NutritionalPatient[] = [
     alergia: null,
     alOk: true,
     d7: false,
+    dados_incompletos: true,
+    nrs_completo: false,
     hist: [],
   },
   {
@@ -262,7 +267,7 @@ const MOCK_PATIENTS: NutritionalPatient[] = [
     npo: 0,
     peso: "88kg",
     imc: 26.3,
-    haval: 14,
+    haval: 30,
     glim_diag: "nd",
     glim_fen: [],
     glim_etiol: [],
@@ -307,6 +312,7 @@ const initialState: NutritionalState = {
   acknowledged: {},
   loading: false,
   error: null,
+  filtFila: "",
 };
 
 export const fetchPatients = createAsyncThunk(
@@ -405,6 +411,9 @@ const nutritionalSlice = createSlice({
         patient.inst = patient.inst.filter((i) => !i.d.includes("Alergia"));
       }
     },
+    setFiltFila(state, action: { payload: string }) {
+      state.filtFila = action.payload;
+    },
     reset() {
       return { ...initialState, acknowledged: {} };
     },
@@ -432,6 +441,7 @@ export const {
   saveAval,
   confirmAllergy,
   acknowledgePatient,
+  setFiltFila,
   reset,
 } = nutritionalSlice.actions;
 export default nutritionalSlice.reducer;

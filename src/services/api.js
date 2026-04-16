@@ -40,6 +40,7 @@ const endpoints = {
   reports: "/reports",
   substance: "/substance",
   memory: "/memory",
+  nutritional: "/nutritional",
   user: "/user",
   users: "/users",
   clinicalNotes: "/notes",
@@ -167,6 +168,12 @@ api.exams.getExamTypes = (params = {}) =>
     params,
     ...setHeaders(),
   });
+
+/**
+ * Nutritional.
+ *
+ */
+// api.nutritional = {};
 
 const getExams = (bearerToken, admissionNumber, params = {}) =>
   instance.get(`${endpoints.exams}/${admissionNumber}`, {
