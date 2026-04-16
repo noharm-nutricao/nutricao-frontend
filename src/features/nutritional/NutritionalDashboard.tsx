@@ -276,6 +276,7 @@ export function NutritionalDashboard() {
   const [viewMode, setViewMode] = useState<"grid" | "lista">("grid");
   const [filtAla, setFiltAla] = useState("all");
   const [filtSev, setFiltSev] = useState("");
+  const [filtFila, setFiltFila] = useState("all");
   const [sortAsc, setSortAsc] = useState(false);
   const [modalPatient, setModalPatient] = useState<NutritionalPatient | null>(null);
 
@@ -285,8 +286,8 @@ export function NutritionalDashboard() {
 
   // ── Auto-fetch + 15-min refresh ─────────────────────────────────────────
   useEffect(() => {
-    dispatch(fetchPatients());
-    const interval = setInterval(() => dispatch(fetchPatients()), REFRESH_INTERVAL);
+    dispatch(fetchPatients({}));
+    const interval = setInterval(() => dispatch(fetchPatients({})), REFRESH_INTERVAL);
     return () => clearInterval(interval);
   }, [dispatch]);
 
