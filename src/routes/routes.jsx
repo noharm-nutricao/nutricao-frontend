@@ -13,6 +13,7 @@ import ScreeningList from "pages/ScreeningList";
 import Screening from "pages/Screening";
 import References from "pages/References";
 import DrugDashboard from "pages/DrugDashboard";
+import NutritionalDashboard from "pages/Nutritional";
 import Reports from "pages/Reports";
 import InterventionList from "pages/InterventionList";
 import UserConfig from "pages/UserConfig";
@@ -444,6 +445,11 @@ const routes = [
     exact: true,
     path: "/relatorios/arquivo/:type/:id_report/:filename",
     element: <WithAuth component={FileReport} />,
+  },
+  {
+    exact: true,
+    path: "/nutricional/painel",
+    element: <WithAuth component={NutritionalDashboard} />,
   },
   {
     exact: true,
