@@ -17,7 +17,7 @@ import {
 import styled from "styled-components";
 
 import { useAppDispatch, useAppSelector } from "src/store";
-import { selectFila1, selectFila5 } from "src/store/selectors/nutritionalSelectors";
+import { selectFila1, selectFila2, selectFila5 } from "src/store/selectors/nutritionalSelectors";
 import { FeatureService } from "src/services/FeatureService";
 import Feature from "src/models/Feature";
 import { PageHeader } from "src/styles/PageHeader.style";
@@ -258,14 +258,14 @@ function matchFila(
 ): boolean {
   if (!filtFila || filtFila === "all") return true;
   if (filtFila === "FILA1") return (p.sev === "cr" || p.sev === "al") && p.haval > 18;
-  if (filtFila === "FILA2") return p.haval > 18;
+  if (filtFila === "FILA2") return p.haval >= 12 && p.haval <= 24;
   if (filtFila === "FILA5") return p.d7 === true;
   return true;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-const REFRESH_INTERVAL = 15 * 60 * 1000; // 15 minutos
+const REFRESH_INTERVAL = 3 * 60 * 1000; // 3 minutos
 
 export function NutritionalDashboard() {
   const dispatch = useAppDispatch();
@@ -276,11 +276,12 @@ export function NutritionalDashboard() {
   const [viewMode, setViewMode] = useState<"grid" | "lista">("grid");
   const [filtAla, setFiltAla] = useState("all");
   const [filtSev, setFiltSev] = useState("");
-  const [filtFila, setFiltFila] = useState("all");
   const [sortAsc, setSortAsc] = useState(false);
   const [modalPatient, setModalPatient] = useState<NutritionalPatient | null>(null);
 
+  const filtFila = useAppSelector((state: any) => state.nutritional.filtFila as string);
   const fila1Patients = useAppSelector(selectFila1);
+  const fila2Patients = useAppSelector(selectFila2);
   const fila5Patients = useAppSelector(selectFila5);
   const [modalTab, setModalTab] = useState("vis");
 
@@ -394,7 +395,7 @@ export function NutritionalDashboard() {
         filtFila={filtFila}
         countsFila={{
           FILA1: fila1Patients.length,
-          FILA2: patients.filter((p: NutritionalPatient) => p.haval > 18).length,
+          FILA2: fila2Patients.length,
           FILA5: fila5Patients.length,
         }}
         sortAsc={sortAsc}
@@ -539,7 +540,7 @@ export function NutritionalDashboard() {
                 >
                   {alaPatients.map((p) => {
                     const isAtend = !!acknowledged[p.id];
-                    const sevCfg = SEV_CONFIG[p.sev];
+                    const sevCfg = p.sev ? SEV_CONFIG[p.sev] : SEV_CONFIG["bx"];
                     const isUTI = p.ala === "UTI";
                     const havalColor =
                       p.haval > 48
@@ -557,7 +558,7 @@ export function NutritionalDashboard() {
                           {/* Score */}
                           <ListCell>
                             <ListCellLabel>Score</ListCellLabel>
-                            {isUTI && p.mnutric !== null ? (
+                            {isUTI && p.mnutric != null ? (
                               <div style={{ display: "flex", gap: 4 }}>
                                 <div style={{ textAlign: "center" }}>
                                   <div
@@ -629,7 +630,7 @@ export function NutritionalDashboard() {
                                 )}
                                 {p.nrs_completo === false && (
                                   <span style={{ display: "inline-block", padding: "1px 5px", borderRadius: "9px", fontSize: "9px", fontWeight: 600, background: "#fff1f0", color: "#cf1322", border: "1px solid #ffa39e" }}>
-                                    ❌ Pontuação incompleta
+                                    Score incompleto
                                   </span>
                                 )}
                               </div>
