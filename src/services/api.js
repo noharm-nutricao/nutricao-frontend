@@ -954,6 +954,11 @@ api.nutritional.getPatients = (params = {}) =>
     ...setHeaders(),
   });
 
+api.nutritional.saveNrsNut = (nratendimento, data) =>
+  instance.put(`/nutritional/patients/${nratendimento}/nrs-nut`, data, {
+    ...setHeaders(),
+  });
+
 /** GENERAL */
 api.general = {};
 const getVersion = () =>
