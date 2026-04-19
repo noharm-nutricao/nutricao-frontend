@@ -249,7 +249,7 @@ const mockCampo1 = {
 
   const prescription = {
     ...originalPrescription,
-    campo1: originalPrescription.campo1 || mockCampo1 
+    campo1: originalPrescription.campo1 
   };
 
   const { campo1 } = prescription;
