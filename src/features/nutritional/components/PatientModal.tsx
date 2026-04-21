@@ -13,6 +13,7 @@ import {
   Checkbox,
   Radio,
   Button,
+  Tooltip,
 } from "antd";
 import {
   WarningOutlined,
@@ -34,6 +35,7 @@ import {
   confirmAllergy,
   acknowledgePatient,
 } from "../NutritionalSlice";
+import { MnutricManualForm } from "./MnutricManualForm";
 import {
   SEV_CONFIG,
   ALA_CONFIG,
@@ -392,12 +394,12 @@ export function PatientModal({
 
   const isUTI = p.ala === "UTI";
   const isAtend = !!acknowledged[p.id];
-  const sevCfg = SEV_CONFIG[p.sev];
+  const sevCfg = p.sev ? SEV_CONFIG[p.sev] : { color: "#8c8c8c" };
   const alaCfg = ALA_CONFIG[p.ala];
 
   const mbcd = calcMbcd(p);
 
-  const mnSev = p.mnutric !== null ? sevMNUTRIC(p.mnutric) : null;
+  const mnSev = p.mnutric != null ? sevMNUTRIC(p.mnutric) : null;
   const nrsSev = sevNRS(p.nrs);
 
   const havalColor =
@@ -520,14 +522,19 @@ export function PatientModal({
                 <div className="info-value" style={{ color: "#d4931a" }}>
                   ⏳ Aguardando
                 </div>
-                <Button
-                  size="small"
-                  type="primary"
-                  style={{ marginTop: 4, fontSize: 11 }}
-                  onClick={handleAcknowledge}
+                <Tooltip
+                  title={p.dados_incompletos ? "Insira APACHE II e SOFA para reconhecer" : undefined}
                 >
-                  Reconhecer
-                </Button>
+                  <Button
+                    size="small"
+                    type="primary"
+                    style={{ marginTop: 4, fontSize: 11 }}
+                    disabled={!!p.dados_incompletos}
+                    onClick={handleAcknowledge}
+                  >
+                    Reconhecer
+                  </Button>
+                </Tooltip>
               </>
             )}
           </InfoBlock>
@@ -539,8 +546,17 @@ export function PatientModal({
       {/* Campo 1 */}
       <SectionTitle>Campo 1 – Risco nutricional (rastreio)</SectionTitle>
 
+      {isUTI && p.dados_incompletos && (
+        <MnutricManualForm
+          nratendimento={p.id}
+          apacheAtual={p.apache}
+          sofaAtual={p.sofa}
+          onSaved={() => {}}
+        />
+      )}
+
       <Row gutter={[12, 12]} style={{ marginBottom: 12 }}>
-        {isUTI && p.mnutric !== null && (
+        {isUTI && p.mnutric != null && (
           <Col span={12}>
             <ScorePanel
               $borderColor="rgba(126,87,194,0.3)"
@@ -579,7 +595,7 @@ export function PatientModal({
           </Col>
         )}
 
-        <Col span={isUTI && p.mnutric !== null ? 12 : 24}>
+        <Col span={isUTI && p.mnutric != null ? 12 : 24}>
           <ScorePanel
             $borderColor="rgba(19,194,194,0.3)"
             $bg="rgba(19,194,194,0.04)"

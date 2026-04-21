@@ -17,13 +17,13 @@ import {
   GLIM_LABEL,
 } from "../nutritionalUtils";
 
-const Card = styled.div<{ $sev: SeverityType; $atend: boolean }>`
+const Card = styled.div<{ $sev: SeverityType | null; $atend: boolean }>`
   border: 1px solid
-    ${(p) => (p.$atend ? "#b7eb8f" : SEV_CONFIG[p.$sev].border)};
+    ${(p) => p.$atend ? "#b7eb8f" : p.$sev ? SEV_CONFIG[p.$sev].border : "#d9d9d9"};
   border-left: 4px solid
-    ${(p) => (p.$atend ? "#52c41a" : SEV_CONFIG[p.$sev].leftBorder)};
+    ${(p) => p.$atend ? "#52c41a" : p.$sev ? SEV_CONFIG[p.$sev].leftBorder : "#bdbdbd"};
   border-radius: 8px;
-  background: ${(p) => (p.$atend ? "#f6ffed" : "#fff")};
+  background: ${(p) => p.$atend ? "#f6ffed" : p.$sev ? "#fff" : "#fafafa"};
   position: relative;
   overflow: hidden;
   transition: box-shadow 0.15s, transform 0.15s;
@@ -199,7 +199,7 @@ export function PatientCard({
   const mbcdColor =
     mbcd === 4 ? "#c41e3a" : mbcd === 3 ? "#e24b4a" : mbcd === 2 ? "#d4931a" : "#8c8c8c";
 
-  const mnSev = p.mnutric !== null ? sevMNUTRIC(p.mnutric) : null;
+  const mnSev = p.mnutric != null ? sevMNUTRIC(p.mnutric) : null;
   const nrsSev = sevNRS(p.nrs);
 
   const glimColor =
@@ -260,7 +260,7 @@ export function PatientCard({
               )}
               {p.nrs_completo === false && (
                 <Badge $bg="#fff1f0" $color="#cf1322" $border="#ffa39e">
-                  ❌ Pontuação incompleta
+                  Score incompleto
                 </Badge>
               )}
             </div>
@@ -269,32 +269,45 @@ export function PatientCard({
 
         {/* Campo 1 – Risco nutricional */}
         <SectionLabel>Campo 1 – Risco</SectionLabel>
-        {isUTI && p.mnutric !== null ? (
+        {isUTI && p.mnutric != null ? (
           <ScoreDual>
-            <ScoreChip $color={SEV_CONFIG[mnSev!].leftBorder}>
-              <div className="score-num">{p.mnutric}</div>
-              <div className="score-lbl">mNUTRIC</div>
-            </ScoreChip>
-            <ScoreChip $color={SEV_CONFIG[nrsSev].leftBorder}>
-              <div className="score-num">{p.nrs}</div>
-              <div className="score-lbl">NRS</div>
-            </ScoreChip>
+            <Tooltip
+              title={p.mn_dims ? `Idade ${p.mn_dims.idade} · APACHE ${p.mn_dims.apache} · SOFA ${p.mn_dims.sofa} · Comor ${p.mn_dims.comor} · Dias ${p.mn_dims.dias}` : undefined}
+            >
+              <ScoreChip $color={mnSev ? SEV_CONFIG[mnSev].leftBorder : "#bdbdbd"}>
+                <div className="score-num">{p.mnutric}</div>
+                <div className="score-lbl">mNUTRIC</div>
+              </ScoreChip>
+            </Tooltip>
+            <Tooltip
+              title={p.nrs_dims ? `Nut ${p.nrs_dims.nut ?? "-"} · Doença ${p.nrs_dims.doenca} · Idade ${p.nrs_dims.idade}` : undefined}
+            >
+              <ScoreChip $color={SEV_CONFIG[nrsSev].leftBorder}>
+                <div className="score-num">{p.nrs}</div>
+                <div className="score-lbl">NRS</div>
+              </ScoreChip>
+            </Tooltip>
           </ScoreDual>
         ) : (
           <ScoreSingle>
-            <span
-              style={{
-                fontSize: 15,
-                fontWeight: 700,
-                color: SEV_CONFIG[nrsSev].leftBorder,
-              }}
+            <Tooltip
+              title={p.nrs_dims ? `Nut ${p.nrs_dims.nut ?? "-"} · Doença ${p.nrs_dims.doenca} · Idade ${p.nrs_dims.idade}` : undefined}
             >
-              NRS {p.nrs}
-            </span>
+              <span style={{ fontSize: 15, fontWeight: 700, color: SEV_CONFIG[nrsSev].leftBorder }}>
+                NRS {p.nrs}
+              </span>
+            </Tooltip>
             <Badge $bg="#e6fffb" $color="#08979c" $border="#87e8de">
               NRS-2002
             </Badge>
           </ScoreSingle>
+        )}
+        {isUTI && (
+          <div style={{ textAlign: "right", marginTop: 2 }}>
+            <Badge $bg="#f0eeff" $color="#7e57c2" $border="#b39ddb">
+              mNUTRIC
+            </Badge>
+          </div>
         )}
 
         {/* Campo 2 – Diagnóstico GLIM */}

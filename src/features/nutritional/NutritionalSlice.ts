@@ -28,7 +28,7 @@ export interface NutritionalPatient {
   dias: number;
   mnutric: number | null;
   nrs: number;
-  sev: SeverityType;
+  sev: SeverityType | null;
   pri: number;
   mn_dims?: {
     idade: number;
@@ -71,240 +71,6 @@ interface NutritionalState {
   filtFila: string;
 }
 
-const MOCK_PATIENTS: NutritionalPatient[] = [
-  {
-    id: 1,
-    leito: "UTI-03",
-    ala: "UTI",
-    nome: "Paciente 1",
-    idade: 67,
-    dias: 14,
-    mnutric: 9,
-    nrs: 5,
-    sev: "cr",
-    pri: 1,
-    mn_dims: { idade: 2, apache: 3, sofa: 3, comor: 1, dias: 0 },
-    nrs_dims: { nut: 3, doenca: 1, idade: 1 },
-    dieta: "NPO > 52h",
-    npo: 52,
-    peso: "58kg",
-    imc: 17.2,
-    haval: 38,
-    glim_diag: "grave",
-    glim_fen: ["perda_peso", "baixo_imc"],
-    glim_etiol: ["doenca_inflamacao", "reducao_ingestao"],
-    inst: [
-      { t: "lab", d: "Albumina 1,8 g/dL" },
-      { t: "lab", d: "Hb 8,4 g/dL" },
-      { t: "lab", d: "Fósforo baixo" },
-      { t: "clin", d: "NPO 52h" },
-    ],
-    conduta: "TN parenteral urgente",
-    alergia: null,
-    alOk: true,
-    d7: true,
-    hist: [
-      {
-        h: "12/03 08:14",
-        p: "Nutr. Silva",
-        c: "Iniciado NPT. Meta 1800 kcal, 100g proteína.",
-        freq: "24h",
-        ing: 0,
-      },
-    ],
-  },
-  {
-    id: 2,
-    leito: "UTI-07",
-    ala: "UTI",
-    nome: "Paciente 2",
-    idade: 54,
-    dias: 8,
-    mnutric: 7,
-    nrs: 4,
-    sev: "cr",
-    pri: 2,
-    mn_dims: { idade: 1, apache: 3, sofa: 2, comor: 1, dias: 0 },
-    nrs_dims: { nut: 2, doenca: 2, idade: 0 },
-    dieta: "Enteral contínua",
-    npo: 0,
-    peso: "62kg",
-    imc: 19.8,
-    haval: 29,
-    glim_diag: "mod",
-    glim_fen: ["perda_peso"],
-    glim_etiol: ["doenca_inflamacao"],
-    inst: [
-      { t: "lab", d: "Albumina 2,3 g/dL" },
-      { t: "lab", d: "PCR elevado" },
-    ],
-    conduta: "Revisar protocolo enteral",
-    alergia: null,
-    alOk: true,
-    d7: false,
-    hist: [
-      {
-        h: "14/03 10:22",
-        p: "Nutr. Santos",
-        c: "Ajustado volume enteral 60mL/h.",
-        freq: "48h",
-        ing: 65,
-      },
-    ],
-  },
-  {
-    id: 3,
-    leito: "B-12",
-    ala: "B",
-    nome: "Paciente 3",
-    idade: 71,
-    dias: 5,
-    mnutric: null,
-    nrs: 5,
-    sev: "al",
-    pri: 3,
-    nrs_dims: { nut: 3, doenca: 1, idade: 1 },
-    dieta: "VO parcial",
-    npo: 0,
-    peso: "71kg",
-    imc: 20.4,
-    haval: 25,
-    glim_diag: "mod",
-    glim_fen: ["perda_peso"],
-    glim_etiol: ["reducao_ingestao"],
-    inst: [
-      { t: "lab", d: "Hb 9,2 g/dL" },
-      { t: "clin", d: "Perda 6% peso" },
-    ],
-    conduta: "Suporte nutricional oral",
-    alergia: "Frutos do mar",
-    alOk: false,
-    d7: true,
-    hist: [],
-  },
-  {
-    id: 4,
-    leito: "B-04",
-    ala: "B",
-    nome: "Paciente 4",
-    idade: 48,
-    dias: 3,
-    mnutric: null,
-    nrs: 3,
-    sev: "al",
-    pri: 4,
-    nrs_dims: { nut: 2, doenca: 1, idade: 0 },
-    dieta: "VO livre",
-    npo: 0,
-    peso: "68kg",
-    imc: 22.1,
-    haval: 27,
-    glim_diag: null,
-    glim_fen: [],
-    glim_etiol: [],
-    inst: [{ t: "lab", d: "Albumina 2,9 g/dL" }],
-    conduta: "Aguarda avaliação GLIM",
-    alergia: null,
-    alOk: true,
-    d7: false,
-    dados_incompletos: true,
-    nrs_completo: false,
-    hist: [],
-  },
-  {
-    id: 5,
-    leito: "C-05",
-    ala: "C",
-    nome: "Paciente 5",
-    idade: 55,
-    dias: 9,
-    mnutric: null,
-    nrs: 4,
-    sev: "al",
-    pri: 5,
-    nrs_dims: { nut: 2, doenca: 2, idade: 0 },
-    dieta: "NPT em uso",
-    npo: 0,
-    peso: "55kg",
-    imc: 18.5,
-    haval: 18,
-    glim_diag: "grave",
-    glim_fen: ["perda_peso", "baixo_imc", "massa_muscular"],
-    glim_etiol: ["reducao_ingestao", "doenca_inflamacao"],
-    inst: [
-      { t: "lab", d: "Fósforo 2,1 mg/dL" },
-      { t: "lab", d: "Magnésio baixo" },
-      { t: "rx", d: "NPT em uso" },
-    ],
-    conduta: "Corrigir eletrólitos – risco realimentação",
-    alergia: null,
-    alOk: true,
-    d7: true,
-    hist: [
-      {
-        h: "15/03 14:10",
-        p: "Nutr. Silva",
-        c: "Risco de síndrome de realimentação. Repor fósforo EV.",
-        freq: "24h",
-        ing: null,
-      },
-    ],
-  },
-  {
-    id: 6,
-    leito: "B-09",
-    ala: "B",
-    nome: "Paciente 6",
-    idade: 60,
-    dias: 6,
-    mnutric: null,
-    nrs: 3,
-    sev: "md",
-    pri: 6,
-    nrs_dims: { nut: 1, doenca: 2, idade: 0 },
-    dieta: "Enteral noturna",
-    npo: 0,
-    peso: "88kg",
-    imc: 26.3,
-    haval: 30,
-    glim_diag: "nd",
-    glim_fen: [],
-    glim_etiol: [],
-    inst: [{ t: "rx", d: "Troca de fórmula enteral" }],
-    conduta: "Ajuste fórmula",
-    alergia: null,
-    alOk: true,
-    d7: false,
-    hist: [],
-  },
-  {
-    id: 7,
-    leito: "C-01",
-    ala: "C",
-    nome: "Paciente 7",
-    idade: 38,
-    dias: 2,
-    mnutric: null,
-    nrs: 1,
-    sev: "bx",
-    pri: 7,
-    nrs_dims: { nut: 0, doenca: 1, idade: 0 },
-    dieta: "VO livre",
-    npo: 0,
-    peso: "61kg",
-    imc: 23.0,
-    haval: 10,
-    glim_diag: "nd",
-    glim_fen: [],
-    glim_etiol: [],
-    inst: [{ t: "clin", d: "Alergia sem confirmação" }],
-    conduta: "Dieta sem lactose",
-    alergia: "Lactose",
-    alOk: false,
-    d7: false,
-    hist: [],
-  },
-];
 
 const initialState: NutritionalState = {
   patients: [],
@@ -314,14 +80,67 @@ const initialState: NutritionalState = {
   filtFila: "",
 };
 
+const ALA_MAP: Record<string, AlaType> = {
+  "UTI":        "UTI",
+  "Ala B":      "B",
+  "Ala C":      "C",
+};
+
+function normalizeAla(raw: string | null | undefined): AlaType {
+  if (!raw) return "C";
+  return ALA_MAP[raw] ?? (raw as AlaType);
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function normalizeApiPatient(raw: any): NutritionalPatient {
+  const c1 = raw.campo1 ?? {};
+  return {
+    id: raw.id,
+    leito: raw.leito ?? "—",
+    ala: normalizeAla(raw.nome_setor ?? raw.ala),
+    nome: raw.nome ?? "",
+    idade: raw.idade ?? 0,
+    dias: raw.dias ?? 0,
+    // Campo 1 — scores dentro de campo1 (null quando backend ainda não calculou)
+    mnutric: c1.mnutric_total ?? c1.mnutric ?? null,
+    nrs: c1.nrs_total ?? c1.nrs ?? 0,
+    // sev null → card cinza (sem classificação calculada)
+    sev: (raw.sev ?? null) as SeverityType | null,
+    pri: raw.pri ?? 0,
+    mn_dims: c1.mn_dims ?? null,
+    nrs_dims: c1.nrs_dims ?? { nut: 0, doenca: 0, idade: 0 },
+    apache: c1.apache ?? c1.mn_apache_manual ?? undefined,
+    sofa: c1.sofa ?? c1.mn_sofa_manual ?? undefined,
+    // Clínico
+    dieta: raw.dieta ?? "",
+    npo: raw.npo ?? 0,
+    peso: raw.peso != null ? `${raw.peso} kg` : "",
+    imc: raw.imc ?? null,
+    // Acompanhamento
+    haval: raw.haval ?? 0,
+    glim_diag: raw.glim_diag ?? null,
+    glim_fen: raw.glim_fen ?? [],
+    glim_etiol: raw.glim_etiol ?? [],
+    inst: raw.inst ?? [],
+    conduta: raw.conduta ?? "",
+    alergia: raw.alergia ?? null,
+    alOk: raw.al_ok ?? raw.alOk ?? true,
+    d7: raw.d7 ?? false,
+    // campo1 é a fonte canônica para flags de completude
+    dados_incompletos: c1.dados_incompletos ?? raw.dados_incompletos ?? false,
+    nrs_completo: c1.nrs_completo ?? raw.nrs_completo,
+    hist: raw.hist ?? [],
+  };
+}
+
 export const fetchPatients = createAsyncThunk(
   "nutritional/fetchPatients",
   async (params: { setor?: number } = {}, thunkAPI) => {
     try {
       const response = await api.nutritional.getPatients(params);
       const payload = response.data;
-      // suporta { data: [...] } e array direto
-      return (Array.isArray(payload) ? payload : payload?.data ?? []) as NutritionalPatient[];
+      const rawList: any[] = Array.isArray(payload) ? payload : payload?.data ?? []; // eslint-disable-line @typescript-eslint/no-explicit-any
+      return rawList.map(normalizeApiPatient);
     } catch (err) {
       const axiosErr = err as AxiosError<{ error?: string; message?: string }>;
       const status = axiosErr.response?.status;
@@ -331,6 +150,28 @@ export const fetchPatients = createAsyncThunk(
         axiosErr.message ??
         "Erro ao carregar pacientes";
       return thunkAPI.rejectWithValue(status ? `${status} — ${msg}` : msg);
+    }
+  }
+);
+
+export const saveMnutricManual = createAsyncThunk(
+  "nutritional/saveMnutricManual",
+  async (
+    { id, apache_ii, sofa }: { id: number; apache_ii: number; sofa: number },
+    thunkAPI
+  ) => {
+    try {
+      const response = await api.nutritional.saveNrsNut(id, { apache_ii, sofa });
+      const campo1 = response.data?.campo1 ?? response.data ?? {};
+      return { id, campo1 };
+    } catch (err) {
+      const axiosErr = err as AxiosError<{ error?: string; message?: string }>;
+      const msg =
+        axiosErr.response?.data?.error ??
+        axiosErr.response?.data?.message ??
+        axiosErr.message ??
+        "Erro ao salvar APACHE/SOFA";
+      return thunkAPI.rejectWithValue(msg);
     }
   }
 );
@@ -430,6 +271,17 @@ const nutritionalSlice = createSlice({
       .addCase(fetchPatients.rejected, (state, action) => {
         state.loading = false;
         state.error = (action.payload as string) ?? action.error.message ?? "Erro desconhecido";
+      })
+      .addCase(saveMnutricManual.fulfilled, (state, action) => {
+        const { id, campo1 } = action.payload;
+        const patient = state.patients.find((p) => p.id === id);
+        if (patient) {
+          patient.dados_incompletos = false;
+          patient.mnutric = campo1.mnutric_total ?? campo1.mnutric ?? patient.mnutric;
+          patient.sev = campo1.classificacao ?? patient.sev;
+          patient.mn_dims = campo1.mn_dims ?? patient.mn_dims;
+          patient.nrs_completo = campo1.nrs_completo ?? patient.nrs_completo;
+        }
       });
   },
 });
