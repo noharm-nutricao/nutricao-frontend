@@ -1,5 +1,7 @@
 import { SeverityType, AlaType, NutritionalPatient } from "./NutritionalSlice";
 
+export const REFRESH_INTERVAL = 3 * 60 * 1000; // 3 minutos
+
 export const SEV_CONFIG: Record<
   SeverityType,
   { color: string; bg: string; border: string; label: string; leftBorder: string }
@@ -34,6 +36,14 @@ export const SEV_CONFIG: Record<
   },
 };
 
+export const ALA_ORDER: AlaType[] = ["UTI", "B", "C"];
+
+export const ALA_COLORS: Record<AlaType, string> = {
+  UTI: "#7e57c2",
+  B: "#4dd0e1",
+  C: "#80cbc4",
+};
+
 export const ALA_CONFIG: Record<
   AlaType,
   { nome: string; color: string; total: number; protocol: string }
@@ -48,6 +58,19 @@ export const EMPTY_BEDS: Record<AlaType, string[]> = {
   B:   ["B-01", "B-02", "B-03", "B-05", "B-06", "B-07", "B-08", "B-10", "B-11", "B-13", "B-14"],
   C:   ["C-02", "C-03", "C-04", "C-06", "C-07", "C-08", "C-09", "C-10"],
 };
+
+export const FILA_BTNS = [
+  { key: "FILA1", label: "Alta Prioridade" },
+  { key: "FILA2", label: "Avaliar 24h" },
+  { key: "FILA5", label: "D7 pendente" },
+];
+
+export const RISCO_BTNS = [
+  { key: "cr", label: "Crítico", color: "#c41e3a" },
+  { key: "al", label: "Alto", color: "#e24b4a" },
+  { key: "md", label: "Médio", color: "#d4931a" },
+  { key: "bx", label: "Baixo", color: "#c0641a" },
+];
 
 export const GLIM_LABEL: Record<string, string> = {
   nd: "Sem desnutrição",
