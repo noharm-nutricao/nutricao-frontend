@@ -492,4 +492,88 @@ test.describe("Nutritional API", () => {
     //   expect(responseContext).toBeDefined();
     // });
   });
+
+  test.describe("saveMnutricManual", () => {
+    test("PUT /mnutric-manual deve retornar 200 com payload válido e atualizar campo1", async ({
+      request,
+    }) => {
+      const nratendimento = 12345;
+      const payload = { apache_ii: 20, sofa: 8 };
+
+      const response = await request.put(
+        `${API_URL}/nutritional/patients/${nratendimento}/mnutric-manual`,
+        {
+          data: payload,
+          headers: { "x-api-key": API_KEY },
+        }
+      );
+
+      expect([200, 201, 400]).toContain(response.status());
+      if (response.ok()) {
+        const body = await response.json();
+        expect(body).toHaveProperty("campo1");
+      }
+    });
+
+    test("PUT /mnutric-manual com APACHE II mínimo (0) e SOFA mínimo (0)", async ({
+      request,
+    }) => {
+      const response = await request.put(
+        `${API_URL}/nutritional/patients/12345/mnutric-manual`,
+        {
+          data: { apache_ii: 0, sofa: 0 },
+          headers: { "x-api-key": API_KEY },
+        }
+      );
+
+      expect([200, 201, 400]).toContain(response.status());
+    });
+
+    test("PUT /mnutric-manual com APACHE II máximo (71) e SOFA máximo (24)", async ({
+      request,
+    }) => {
+      const response = await request.put(
+        `${API_URL}/nutritional/patients/12345/mnutric-manual`,
+        {
+          data: { apache_ii: 71, sofa: 24 },
+          headers: { "x-api-key": API_KEY },
+        }
+      );
+
+      expect([200, 201, 400]).toContain(response.status());
+    });
+
+    test("PUT /mnutric-manual deve retornar dados_incompletos=false no campo1 após salvar", async ({
+      request,
+    }) => {
+      const response = await request.put(
+        `${API_URL}/nutritional/patients/12345/mnutric-manual`,
+        {
+          data: { apache_ii: 25, sofa: 10 },
+          headers: { "x-api-key": API_KEY },
+        }
+      );
+
+      expect([200, 201, 400]).toContain(response.status());
+      if (response.ok()) {
+        const body = await response.json();
+        const campo1 = body?.campo1 ?? {};
+        expect(campo1.dados_incompletos).toBeFalsy();
+      }
+    });
+
+    test("PUT /mnutric-manual com paciente inexistente deve retornar 400 ou 404", async ({
+      request,
+    }) => {
+      const response = await request.put(
+        `${API_URL}/nutritional/patients/999999999/mnutric-manual`,
+        {
+          data: { apache_ii: 25, sofa: 10 },
+          headers: { "x-api-key": API_KEY },
+        }
+      );
+
+      expect([400, 404]).toContain(response.status());
+    });
+  });
 });

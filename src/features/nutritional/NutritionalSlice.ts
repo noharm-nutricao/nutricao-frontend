@@ -1,6 +1,6 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import { AxiosError } from "axios";
-import api from "services/api";
+import api from "services/nutritional/api";
 
 export type AlaType = "UTI" | "B" | "C";
 export type SeverityType = "cr" | "al" | "md" | "bx";
@@ -161,7 +161,7 @@ export const saveMnutricManual = createAsyncThunk(
     thunkAPI
   ) => {
     try {
-      const response = await api.nutritional.saveNrsNut(id, { apache_ii, sofa });
+      const response = await api.nutritional.saveMnutricManual(id, { apache_ii, sofa });
       const campo1 = response.data?.campo1 ?? response.data ?? {};
       return { id, campo1 };
     } catch (err) {
