@@ -1,10 +1,9 @@
 name: Build Validation
 
 on:
-  push:
-    branches: [ main, develop ]
-  pull_request:
-    branches: [ main, develop ]
+  # Trigger on any push or pull request to validate the build
+  push: {}
+  pull_request: {}
 
 jobs:
   build:
