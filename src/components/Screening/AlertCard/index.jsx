@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useDispatch } from "react-redux";
 import { useTranslation } from "react-i18next";
 import {
@@ -12,6 +12,7 @@ import PrescriptionCard from "components/PrescriptionCard";
 import Tooltip from "components/Tooltip";
 import DefaultModal from "components/Modal";
 import Button from "components/Button";
+import Badge from "components/Badge";
 import AlertListReport from "features/reports/AlertListReport/AlertListReport";
 import {
   setInitialFilters,
@@ -88,10 +89,24 @@ export const getAlerts = (stats, t) => [
   },
 ];
 
-export default function AlertCard({ stats, prescription }) {
+export default function AlertCard({ stats, prescription, onAcknowledge }) {
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const [modal, setModal] = useState(false);
+  const [isAcknowledged, setIsAcknowledged] = useState(
+    !!prescription?.alertsAcknowledged
+  );
+  const [isAcknowledging, setIsAcknowledging] = useState(false);
+
+  const hasIncompleteData = !!(
+    prescription?.dados_incompletos ||
+    prescription?.data_incompletos ||
+    prescription?.incompleteData
+  );
+
+  useEffect(() => {
+    setIsAcknowledged(!!prescription?.alertsAcknowledged);
+  }, [prescription?.alertsAcknowledged]);
 
   if (!stats) {
     return null;
@@ -106,6 +121,42 @@ export default function AlertCard({ stats, prescription }) {
     trackPrescriptionAction(TrackedPrescriptionAction.SHOW_ALERTS_MODAL, {
       filters: filters,
     });
+  };
+
+  // TODO: connect this to the actual backend acknowledgement action.
+  // The current implementation applies the optimistic UI locally and
+  // supports an optional onAcknowledge callback from the parent.
+  const handleAcknowledge = async () => {
+    if (hasIncompleteData || isAcknowledged || isAcknowledging) {
+      return;
+    }
+
+    setIsAcknowledging(true);
+    setIsAcknowledged(true);
+
+    try {
+      if (typeof onAcknowledge === "function") {
+        await onAcknowledge(prescription.idPrescription);
+      } else {
+        notification.info({
+          message:
+            "Reconhecimento aplicado localmente. Complete a integração de backend para persistir.",
+        });
+      }
+    } catch (err) {
+      setIsAcknowledged(!!prescription?.alertsAcknowledged);
+      if (err?.response?.status === 409) {
+        notification.error({
+          message: "Este alerta já foi reconhecido por outra pessoa.",
+        });
+      } else {
+        notification.error({
+          message: "Erro ao reconhecer alerta. Tente novamente.",
+        });
+      }
+    } finally {
+      setIsAcknowledging(false);
+    }
   };
 
   return (
@@ -144,6 +195,35 @@ export default function AlertCard({ stats, prescription }) {
         footer={null}
         style={{ top: "10px", height: "100vh" }}
       >
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: "16px",
+          }}
+        >
+          <Badge
+            color={isAcknowledged ? "green" : "amber"}
+            text={isAcknowledged ? "Atendido" : "Aguardando reconhecimento"}
+          />
+          <Tooltip
+            title={
+              hasIncompleteData
+                ? "Dados incompletos: APACHE/SOFA necessários para reconhecer"
+                : ""
+            }
+          >
+            <Button
+              type="primary"
+              disabled={hasIncompleteData || isAcknowledged}
+              loading={isAcknowledging}
+              onClick={handleAcknowledge}
+            >
+              Reconhecer
+            </Button>
+          </Tooltip>
+        </div>
         <AlertListReport prescription={prescription} />
       </DefaultModal>
     </PrescriptionCard>
