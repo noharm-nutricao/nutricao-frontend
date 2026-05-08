@@ -6,6 +6,7 @@ interface NutritionalAPI {
   saveNrsNut: (nratendimento: number, data: NrsNutPayload) => any;
   saveGlim: (nratendimento: number, data: GlimPayload) => any;
   saveAval: (nratendimento: number, data: AvalPayload) => any;
+  getAssessmentHistory: (nratendimento: number) => any;
   acknowledgePatient: (nratendimento: number) => any;
 };
 
@@ -76,6 +77,16 @@ api.nutritional.saveAval = (nratendimento: number, data: AvalPayload) =>
     setHeaders(),
   );
 
+/**
+ * Retrieves the nutritional assessment history for the patient.
+ * @param nratendimento - Patient admission number
+ * @returns Promise with the assessment history list
+ */
+api.nutritional.getAssessmentHistory = (nratendimento: number) =>
+  instance.get(
+    `/patients/${nratendimento}/assessment`,
+    setHeaders(),
+  );
 
 /**
  * Acknowledges/dismisses a nutritional alert for the patient.

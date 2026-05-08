@@ -30,7 +30,8 @@ import {
   GlimDiag,
   saveGlim,
   saveNrsNut,
-  saveAval,
+  saveAssessment,
+  fetchAssessmentHistory,
   confirmAllergy,
   acknowledgePatient,
 } from "../NutritionalSlice";
@@ -374,6 +375,8 @@ export function PatientModal({
   // ── Initialize from patient ───────────────────────────────────────────
   useEffect(() => {
     if (!p) return;
+    dispatch(fetchAssessmentHistory(p.id));
+    
     setNrsA(p.nrs_dims.nut);
     setFenSelected(p.glim_fen ?? []);
     setEtiolSelected(p.glim_etiol ?? []);
@@ -456,7 +459,16 @@ export function PatientModal({
   };
 
   const handleSaveAval = () => {
-    dispatch(saveAval({ id: p.id, conduta, freq, ing: ingestion }));
+    dispatch(saveAssessment({ 
+      id: p.id, 
+      data: { 
+        conduta, 
+        frequencia: freq as any, 
+        ingestao: ingestion,
+        meta_kcal: kcal || undefined,
+        meta_prot: prot || undefined
+      } 
+    }));
   };
 
   const handleConfirmAllergy = () => {
@@ -993,7 +1005,9 @@ export function PatientModal({
               <div className="hist-conduta">{h.c}</div>
               <div className="hist-meta">
                 <span>Freq: {h.freq}</span>
-                {h.ing !== null && <span>Ingestão: {h.ing}%</span>}
+                {h.ing !== null && <span style={{ marginLeft: 8 }}>Ingestão: {h.ing}%</span>}
+                {h.meta_kcal && <span style={{ marginLeft: 8 }}>{h.meta_kcal} kcal</span>}
+                {h.meta_prot && <span style={{ marginLeft: 8 }}>{h.meta_prot}g de prot.</span>}
               </div>
             </HistEntry>
           ))}

@@ -269,7 +269,7 @@ const REFRESH_INTERVAL = 15 * 60 * 1000; // 15 minutos
 
 export function NutritionalDashboard() {
   const dispatch = useAppDispatch();
-  const { patients, acknowledged, loading, error } = useAppSelector(
+  const { patients, acknowledged, loading, error, filtFila } = useAppSelector(
     (state: any) => state.nutritional
   );
 
@@ -285,8 +285,8 @@ export function NutritionalDashboard() {
 
   // ── Auto-fetch + 15-min refresh ─────────────────────────────────────────
   useEffect(() => {
-    dispatch(fetchPatients());
-    const interval = setInterval(() => dispatch(fetchPatients()), REFRESH_INTERVAL);
+    dispatch(fetchPatients({}));
+    const interval = setInterval(() => dispatch(fetchPatients({})), REFRESH_INTERVAL);
     return () => clearInterval(interval);
   }, [dispatch]);
 
