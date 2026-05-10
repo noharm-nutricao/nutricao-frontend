@@ -9,6 +9,7 @@ export type GlimDiag = "nd" | "mod" | "grave" | null;
 export interface InstItem {
   t: "lab" | "clin" | "rx";
   d: string;
+  label: string;
 }
 
 export interface HistEntry {
@@ -91,6 +92,10 @@ function normalizeAla(raw: string | null | undefined): AlaType {
   return ALA_MAP[raw] ?? (raw as AlaType);
 }
 
+function stripLabValue(d: string): string {
+  return d.replace(/\s*[:\-]?\s*[\d,.]+\s*[a-zA-Z/%]+\/?[a-zA-Z]?\s*$/, "").trim();
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function normalizeApiPatient(raw: any): NutritionalPatient {
   const c1 = raw.campo1 ?? {};
@@ -121,7 +126,11 @@ function normalizeApiPatient(raw: any): NutritionalPatient {
     glim_diag: raw.glim_diag ?? null,
     glim_fen: raw.glim_fen ?? [],
     glim_etiol: raw.glim_etiol ?? [],
-    inst: raw.inst ?? [],
+    inst: (raw.inst ?? []).map((i: any) => ({
+      t: i.t,
+      d: i.d,
+      label: i.t === "lab" ? stripLabValue(i.d) : i.d,
+    })),
     conduta: raw.conduta ?? "",
     alergia: raw.alergia ?? null,
     alOk: raw.al_ok ?? raw.alOk ?? true,
