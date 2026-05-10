@@ -55,6 +55,10 @@ const INST_TYPE_LABEL: Record<string, string> = {
   rx: "Prescrição",
 };
 
+import { ScoreBox } from "./ScoreBox";
+import { GlimReadOnly } from "./GlimReadOnly";
+import { AlertasList } from "./AlertasList";
+
 const NRS_A_OPTIONS = [
   { value: 0, label: "0 pts - Estado nutricional normal" },
   { value: 1, label: "1 pt - Perda > 5% em 3m OU ingestão 50-75%" },
@@ -290,80 +294,27 @@ export function PatientModal({
       )}
 
       <Row gutter={[12, 12]} style={{ marginBottom: 12 }}>
-        {isUTI && p.mnutric != null && (
+        {isUTI && (
           <Col span={12}>
-            <ScorePanel
-              $borderColor="rgba(126,87,194,0.3)"
-              $bg="rgba(126,87,194,0.04)"
-            >
-              <ScorePanelTitle $color="#7e57c2">
-                mNUTRIC · Alto risco ≥ 5
-              </ScorePanelTitle>
-              <ScorePanelValue $color={SEV_CONFIG[mnSev!].leftBorder}>
-                {p.mnutric} / 10
-              </ScorePanelValue>
-              <div style={{ fontSize: 10, color: "#8c8c8c" }}>
-                {p.mnutric >= 5 ? "ALTO RISCO" : "Abaixo do limiar"} · M{mbcd} MBCD
-              </div>
-              <DimsGrid>
-                {[
-                  { lbl: "Idade", val: p.mn_dims?.idade, max: 2 },
-                  { lbl: "APACHE II", val: p.mn_dims?.apache, max: 3 },
-                  { lbl: "SOFA", val: p.mn_dims?.sofa, max: 3 },
-                  { lbl: "Comorbid.", val: p.mn_dims?.comor, max: 1 },
-                  { lbl: "Dias UTI", val: p.mn_dims?.dias, max: 1 },
-                ].map(({ lbl, val, max }) => (
-                  <DimChip key={lbl}>
-                    <div className="dim-val" style={{ color: "#7e57c2" }}>
-                      {val ?? 0}
-                    </div>
-                    <div className="dim-lbl">
-                      {lbl}
-                      <br />
-                      máx {max}
-                    </div>
-                  </DimChip>
-                ))}
-              </DimsGrid>
-            </ScorePanel>
+            <ScoreBox
+              protocolo="MNUTRIC"
+              dims={[p.mn_dims?.idade ?? 0, p.mn_dims?.apache ?? 0, p.mn_dims?.sofa ?? 0, p.mn_dims?.comor ?? 0, p.mn_dims?.dias ?? 0]}
+              labels={["Idade\nmáx 2", "APACHE II\nmáx 3", "SOFA\nmáx 3", "Comorbid.\nmáx 1", "Dias UTI\nmáx 1"]}
+              total={p.mnutric}
+              classificacao={mnSev}
+              completo={!p.dados_incompletos}
+            />
           </Col>
         )}
-
-        <Col span={isUTI && p.mnutric != null ? 12 : 24}>
-          <ScorePanel
-            $borderColor="rgba(19,194,194,0.3)"
-            $bg="rgba(19,194,194,0.04)"
-          >
-            <ScorePanelTitle $color="#08979c">
-              NRS-2002 · Alto risco ≥ 3
-            </ScorePanelTitle>
-            <ScorePanelValue $color={SEV_CONFIG[nrsSev].leftBorder}>
-              {p.nrs} / 7
-            </ScorePanelValue>
-            {!isUTI && (
-              <div style={{ fontSize: 10, color: "#8c8c8c", marginBottom: 4 }}>
-                M{mbcd} MBCD
-              </div>
-            )}
-            <DimsGrid>
-              {[
-                { lbl: "Est. Nutr.", val: p.nrs_dims.nut, max: 3 },
-                { lbl: "Doença", val: p.nrs_dims.doenca, max: 3 },
-                { lbl: "Idade≥70", val: p.nrs_dims.idade, max: 1 },
-              ].map(({ lbl, val, max }) => (
-                <DimChip key={lbl}>
-                  <div className="dim-val" style={{ color: "#08979c" }}>
-                    {val}
-                  </div>
-                  <div className="dim-lbl">
-                    {lbl}
-                    <br />
-                    máx {max}
-                  </div>
-                </DimChip>
-              ))}
-            </DimsGrid>
-          </ScorePanel>
+        <Col span={isUTI ? 12 : 24}>
+          <ScoreBox
+            protocolo="NRS2002"
+            dims={[p.nrs_dims.nut, p.nrs_dims.doenca, p.nrs_dims.idade]}
+            labels={["Est. Nutr.\nmáx 3", "Doença\nmáx 3", "Idade≥70\nmáx 1"]}
+            total={p.nrs || null}
+            classificacao={nrsSev}
+            completo={p.nrs_completo !== false}
+          />
         </Col>
       </Row>
 
@@ -372,61 +323,19 @@ export function PatientModal({
       {/* Campo 2 */}
       <SectionTitle>Campo 2 - Diagnóstico nutricional (GLIM)</SectionTitle>
 
-      <GlimPanel style={{ marginBottom: 12 }}>
-        <GlimSectionLabel>Critérios fenotípicos presentes:</GlimSectionLabel>
-        <ChipsRow>
-          {(["perda_peso", "baixo_imc", "massa_muscular"] as const).map((key) => (
-            <Chip key={key} $active={p.glim_fen.includes(key)}>
-              {GLIM_FEN_LABEL[key]}
-            </Chip>
-          ))}
-        </ChipsRow>
-
-        <GlimSectionLabel>Critérios etiológicos presentes:</GlimSectionLabel>
-        <ChipsRow>
-          {(["reducao_ingestao", "doenca_inflamacao"] as const).map((key) => (
-            <Chip key={key} $active={p.glim_etiol.includes(key)}>
-              {GLIM_ETIOL_LABEL[key]}
-            </Chip>
-          ))}
-        </ChipsRow>
-
-        <GlimDiagBadge $diag={p.glim_diag}>
-          {p.glim_diag !== null ? GLIM_LABEL[p.glim_diag] : "Pendente avaliação GLIM"}
-        </GlimDiagBadge>
-
-        {!p.glim_diag && (
-          <div style={{ marginTop: 10 }}>
-            <Button
-              type="primary"
-              style={{ background: "#7e57c2", borderColor: "#7e57c2", fontSize: 12 }}
-              onClick={() => onTabChange("glim")}
-            >
-              Preencher GLIM
-            </Button>
-          </div>
-        )}
-
-        <GovernanceNote>
-          Albumina, hemoglobina e outros exames bioquímicos não devem, isoladamente, definir
-          diagnóstico de desnutrição. São gatilhos de revisão (Campo 3).
-        </GovernanceNote>
-      </GlimPanel>
+      <GlimReadOnly
+        glim_fen={p.glim_fen}
+        glim_etiol={p.glim_etiol}
+        glim_diag={p.glim_diag}
+        onPreencher={() => onTabChange("glim")}
+      />
 
       {/* Campo 3 */}
       {p.inst.length > 0 && (
         <>
           <Divider style={{ margin: "8px 0" }} />
           <SectionTitle>Campo 3 – Instabilidade nutricional / gatilhos de revisão</SectionTitle>
-          <InstPanel style={{ marginBottom: 12 }}>
-            {p.inst.map((item, i) => (
-              <InstItemRow key={i}>
-                <InstDot $color={INST_DOT_COLOR[item.t] ?? "#8c8c8c"} />
-                <span>{item.d}</span>
-                <InstTypeLabel>{INST_TYPE_LABEL[item.t] ?? item.t}</InstTypeLabel>
-              </InstItemRow>
-            ))}
-          </InstPanel>
+          <AlertasList inst={p.inst} />
         </>
       )}
 
