@@ -1,6 +1,8 @@
 import { SEV_CONFIG } from "../../nutritionalUtils";
 import { ScorePanel, ScorePanelTitle, ScorePanelValue, DimsGrid, DimChip } from "./styles";
 
+//ScoreBox Component
+
 type Protocolo = "MNUTRIC" | "NRS2002";
 type Classificacao = "cr" | "al" | "md" | "bx" | null;
 

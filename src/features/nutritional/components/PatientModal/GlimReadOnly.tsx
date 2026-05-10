@@ -3,6 +3,9 @@ import { GLIM_LABEL, GLIM_FEN_LABEL, GLIM_ETIOL_LABEL } from "../../nutritionalU
 import { GlimPanel, GlimSectionLabel, ChipsRow, Chip, GlimDiagBadge, GovernanceNote } from "./styles";
 import { GlimDiag } from "../../NutritionalSlice";
 
+
+//Glim Component
+
 interface GlimReadOnlyProps {
   glim_fen: string[];
   glim_etiol: string[];

@@ -1,6 +1,8 @@
 import { InstItem } from "../../NutritionalSlice";
 import { InstPanel, InstItemRow, InstDot, InstTypeLabel } from "./styles";
 
+//Alertas Component
+
 const INST_DOT_COLOR: Record<string, string> = {
   lab: "#e24b4a",
   clin: "#d4931a",

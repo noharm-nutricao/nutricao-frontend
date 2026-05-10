@@ -9,6 +9,7 @@ export type GlimDiag = "nd" | "mod" | "grave" | null;
 export interface InstItem {
   t: "lab" | "clin" | "rx";
   d: string;
+  label:string;
 }
 
 export interface HistEntry {
