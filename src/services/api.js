@@ -959,6 +959,25 @@ api.nutritional.saveNrsNut = (nratendimento, data) =>
     ...setHeaders(),
   });
 
+api.nutritional.getAlertas = (nratendimento) =>
+  instance.get(`/nutritional/patients/${nratendimento}/alertas`, {
+    ...setHeaders(),
+  });
+
+api.nutritional.acknowledgeAlert = (nratendimento, alertaId) =>
+  instance.post(
+    `/nutritional/patients/${nratendimento}/alertas/${alertaId}/acknowledge`,
+    {},
+    { ...setHeaders() },
+  );
+
+api.nutritional.acknowledgeAllAlertas = (nratendimento) =>
+  instance.post(
+    `/nutritional/patients/${nratendimento}/alertas/acknowledge-all`,
+    {},
+    { ...setHeaders() },
+  );
+
 /** GENERAL */
 api.general = {};
 const getVersion = () =>

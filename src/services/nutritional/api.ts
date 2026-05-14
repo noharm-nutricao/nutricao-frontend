@@ -7,6 +7,9 @@ interface NutritionalAPI {
   saveGlim: (nratendimento: number, data: GlimPayload) => any;
   saveAval: (nratendimento: number, data: AvalPayload) => any;
   acknowledgePatient: (nratendimento: number) => any;
+  getAlertas: (nratendimento: number) => any;
+  acknowledgeAlert: (nratendimento: number, alertaId: number) => any;
+  acknowledgeAllAlertas: (nratendimento: number) => any;
 };
 
 
@@ -111,6 +114,24 @@ export interface AvalPayload {
   meta_kcal?: number;
   meta_prot?: number;
 };
+
+
+api.nutritional.getAlertas = (nratendimento: number) =>
+  instance.get(`/patients/${nratendimento}/alertas`, setHeaders());
+
+api.nutritional.acknowledgeAlert = (nratendimento: number, alertaId: number) =>
+  instance.post(
+    `/patients/${nratendimento}/alertas/${alertaId}/acknowledge`,
+    {},
+    setHeaders(),
+  );
+
+api.nutritional.acknowledgeAllAlertas = (nratendimento: number) =>
+  instance.post(
+    `/patients/${nratendimento}/alertas/acknowledge-all`,
+    {},
+    setHeaders(),
+  );
 
 
 export default api;

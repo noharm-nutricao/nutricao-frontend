@@ -7,8 +7,10 @@ export type SeverityType = "cr" | "al" | "md" | "bx";
 export type GlimDiag = "nd" | "mod" | "grave" | null;
 
 export interface InstItem {
+  id: number;
   t: "lab" | "clin" | "rx";
   d: string;
+  ack: boolean;
 }
 
 export interface HistEntry {
@@ -69,6 +71,7 @@ interface NutritionalState {
   loading: boolean;
   error: string | null;
   filtFila: string;
+  alertasLoading: Record<number, boolean>;
 }
 
 
@@ -78,6 +81,7 @@ const initialState: NutritionalState = {
   loading: false,
   error: null,
   filtFila: "",
+  alertasLoading: {},
 };
 
 const ALA_MAP: Record<string, AlaType> = {
@@ -121,7 +125,12 @@ function normalizeApiPatient(raw: any): NutritionalPatient {
     glim_diag: raw.glim_diag ?? null,
     glim_fen: raw.glim_fen ?? [],
     glim_etiol: raw.glim_etiol ?? [],
-    inst: raw.inst ?? [],
+    inst: (raw.inst ?? []).map((i: any) => ({ // eslint-disable-line @typescript-eslint/no-explicit-any
+      id: i.id ?? 0,
+      t: i.t,
+      d: i.d,
+      ack: i.ack ?? false,
+    })),
     conduta: raw.conduta ?? "",
     alergia: raw.alergia ?? null,
     alOk: raw.al_ok ?? raw.alOk ?? true,
@@ -171,6 +180,52 @@ export const saveMnutricManual = createAsyncThunk(
         axiosErr.response?.data?.message ??
         axiosErr.message ??
         "Erro ao salvar APACHE/SOFA";
+      return thunkAPI.rejectWithValue(msg);
+    }
+  }
+);
+
+export const fetchAlertas = createAsyncThunk(
+  "nutritional/fetchAlertas",
+  async (patientId: number, thunkAPI) => {
+    try {
+      const response = await api.nutritional.getAlertas(patientId);
+      const raw: any[] = Array.isArray(response.data) ? response.data : response.data?.data ?? []; // eslint-disable-line @typescript-eslint/no-explicit-any
+      return {
+        patientId,
+        alertas: raw.map((i: any) => ({ id: i.id ?? 0, t: i.t, d: i.d, ack: i.ack ?? false })), // eslint-disable-line @typescript-eslint/no-explicit-any
+      };
+    } catch (err) {
+      const axiosErr = err as AxiosError<{ error?: string; message?: string }>;
+      const msg = axiosErr.response?.data?.error ?? axiosErr.response?.data?.message ?? axiosErr.message ?? "Erro ao carregar alertas";
+      return thunkAPI.rejectWithValue(msg);
+    }
+  }
+);
+
+export const acknowledgeAlert = createAsyncThunk(
+  "nutritional/acknowledgeAlert",
+  async ({ patientId, alertaId }: { patientId: number; alertaId: number }, thunkAPI) => {
+    try {
+      await api.nutritional.acknowledgeAlert(patientId, alertaId);
+      return { patientId, alertaId };
+    } catch (err) {
+      const axiosErr = err as AxiosError<{ error?: string; message?: string }>;
+      const msg = axiosErr.response?.data?.error ?? axiosErr.response?.data?.message ?? axiosErr.message ?? "Erro ao reconhecer alerta";
+      return thunkAPI.rejectWithValue(msg);
+    }
+  }
+);
+
+export const acknowledgeAllAlertas = createAsyncThunk(
+  "nutritional/acknowledgeAllAlertas",
+  async ({ patientId, alertaIds }: { patientId: number; alertaIds: number[] }, thunkAPI) => {
+    try {
+      await api.nutritional.acknowledgeAllAlertas(patientId);
+      return { patientId, alertaIds };
+    } catch (err) {
+      const axiosErr = err as AxiosError<{ error?: string; message?: string }>;
+      const msg = axiosErr.response?.data?.error ?? axiosErr.response?.data?.message ?? axiosErr.message ?? "Erro ao reconhecer alertas";
       return thunkAPI.rejectWithValue(msg);
     }
   }
@@ -243,6 +298,22 @@ const nutritionalSlice = createSlice({
         });
       }
     },
+    marcarAlertaReconhecido(state, action: { payload: { patientId: number; alertaId: number } }) {
+      const { patientId, alertaId } = action.payload;
+      const patient = state.patients.find((p) => p.id === patientId);
+      if (patient) {
+        const alerta = patient.inst.find((i) => i.id === alertaId);
+        if (alerta) alerta.ack = true;
+      }
+    },
+    reverterAlerta(state, action: { payload: { patientId: number; alertaId: number } }) {
+      const { patientId, alertaId } = action.payload;
+      const patient = state.patients.find((p) => p.id === patientId);
+      if (patient) {
+        const alerta = patient.inst.find((i) => i.id === alertaId);
+        if (alerta) alerta.ack = false;
+      }
+    },
     confirmAllergy(state, action: { payload: { id: number } }) {
       const { id } = action.payload;
       const patient = state.patients.find((p) => p.id === id);
@@ -272,6 +343,28 @@ const nutritionalSlice = createSlice({
         state.loading = false;
         state.error = (action.payload as string) ?? action.error.message ?? "Erro desconhecido";
       })
+      .addCase(fetchAlertas.pending, (state, action) => {
+        state.alertasLoading[action.meta.arg] = true;
+      })
+      .addCase(fetchAlertas.fulfilled, (state, action) => {
+        const { patientId, alertas } = action.payload;
+        state.alertasLoading[patientId] = false;
+        const patient = state.patients.find((p) => p.id === patientId);
+        if (patient) patient.inst = alertas;
+      })
+      .addCase(fetchAlertas.rejected, (state, action) => {
+        state.alertasLoading[action.meta.arg] = false;
+      })
+      .addCase(acknowledgeAllAlertas.fulfilled, (state, action) => {
+        const { patientId, alertaIds } = action.payload;
+        const patient = state.patients.find((p) => p.id === patientId);
+        if (patient) {
+          alertaIds.forEach((id) => {
+            const a = patient.inst.find((i) => i.id === id);
+            if (a) a.ack = true;
+          });
+        }
+      })
       .addCase(saveMnutricManual.fulfilled, (state, action) => {
         const { id, campo1 } = action.payload;
         const patient = state.patients.find((p) => p.id === id);
@@ -292,6 +385,8 @@ export const {
   saveAval,
   confirmAllergy,
   acknowledgePatient,
+  marcarAlertaReconhecido,
+  reverterAlerta,
   setFiltFila,
   reset,
 } = nutritionalSlice.actions;

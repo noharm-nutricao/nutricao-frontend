@@ -14,9 +14,10 @@ import {
   Radio,
   Button,
   Tooltip,
+  message,
 } from "antd";
 import { WarningOutlined, CheckCircleOutlined, ClockCircleOutlined } from "@ant-design/icons";
-import { useAppDispatch } from "src/store";
+import { useAppDispatch, useAppSelector } from "src/store";
 import { FeatureService } from "src/services/FeatureService";
 import Feature from "src/models/Feature";
 import {
@@ -28,6 +29,11 @@ import {
   saveAval,
   confirmAllergy,
   acknowledgePatient,
+  marcarAlertaReconhecido,
+  reverterAlerta,
+  fetchAlertas,
+  acknowledgeAlert,
+  acknowledgeAllAlertas,
 } from "../../NutritionalSlice";
 import { MnutricManualForm } from "../MnutricManualForm/MnutricManualForm";
 import {
@@ -86,6 +92,9 @@ export function PatientModal({
   onTabChange,
 }: PatientModalProps) {
   const dispatch = useAppDispatch();
+  const alertasLoading = useAppSelector(
+    (state: any) => (state.nutritional.alertasLoading as Record<number, boolean>)[p?.id ?? -1] ?? false // eslint-disable-line @typescript-eslint/no-explicit-any
+  );
 
   // ── NRS tab local state ───────────────────────────────────────────────
   const [nrsA, setNrsA] = useState(0);
@@ -123,6 +132,12 @@ export function PatientModal({
     setInstObs("");
     setAntecipar("");
   }, [p?.id]);
+
+  useEffect(() => {
+    if (p && activeTab === "inst") {
+      dispatch(fetchAlertas(p.id));
+    }
+  }, [activeTab, p?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!p) return null;
 
@@ -210,6 +225,28 @@ export function PatientModal({
         prof: "Nutr. Silva",
       })
     );
+  };
+
+  const handleReconhecerAlerta = async (alertaId: number) => {
+    dispatch(marcarAlertaReconhecido({ patientId: p.id, alertaId }));
+    try {
+      await dispatch(acknowledgeAlert({ patientId: p.id, alertaId })).unwrap();
+    } catch {
+      dispatch(reverterAlerta({ patientId: p.id, alertaId }));
+      message.error("Erro ao reconhecer alerta.");
+    }
+  };
+
+  const handleReconhecerTodos = async () => {
+    const alertasAtivos = p.inst.filter((i) => !i.ack);
+    const ids = alertasAtivos.map((i) => i.id);
+    ids.forEach((id) => dispatch(marcarAlertaReconhecido({ patientId: p.id, alertaId: id })));
+    try {
+      await dispatch(acknowledgeAllAlertas({ patientId: p.id, alertaIds: ids })).unwrap();
+    } catch {
+      ids.forEach((id) => dispatch(reverterAlerta({ patientId: p.id, alertaId: id })));
+      message.error("Erro ao reconhecer alertas.");
+    }
   };
 
   // ── Tab: Resumo ───────────────────────────────────────────────────────
@@ -754,6 +791,10 @@ export function PatientModal({
 
   // ── Tab: Instabilidade ────────────────────────────────────────────────
 
+  const alertasAtivos = p.inst.filter((i) => !i.ack);
+  const labAtivos = alertasAtivos.filter((i) => i.t === "lab");
+  const clinRxAtivos = alertasAtivos.filter((i) => i.t !== "lab");
+
   const tabInst = (
     <div>
       {p.alergia && !p.alOk && (
@@ -787,38 +828,74 @@ export function PatientModal({
         />
       )}
 
-      {p.inst.filter((i) => i.t === "lab").length > 0 && (
+      {labAtivos.length > 0 && (
         <>
           <SectionTitle>Exames laboratoriais</SectionTitle>
           <InstPanel style={{ marginBottom: 16 }}>
-            {p.inst
-              .filter((i) => i.t === "lab")
-              .map((item, i) => (
-                <InstItemRow key={i}>
-                  <InstDot $color={INST_DOT_COLOR.lab} />
-                  <span>{item.d}</span>
-                  <InstTypeLabel>Laboratório</InstTypeLabel>
-                </InstItemRow>
-              ))}
+            {labAtivos.map((item) => (
+              <InstItemRow key={item.id}>
+                <InstDot $color={INST_DOT_COLOR.lab} />
+                <span style={{ flex: 1 }}>{item.d}</span>
+                <InstTypeLabel>Laboratório</InstTypeLabel>
+                <Button
+                  size="small"
+                  type="text"
+                  style={{ marginLeft: 8, fontSize: 11, color: "#3a9c6e" }}
+                  loading={alertasLoading}
+                  onClick={() => handleReconhecerAlerta(item.id)}
+                >
+                  Reconhecer
+                </Button>
+              </InstItemRow>
+            ))}
           </InstPanel>
         </>
       )}
 
-      {p.inst.filter((i) => i.t !== "lab").length > 0 && (
+      {clinRxAtivos.length > 0 && (
         <>
           <SectionTitle>Achados clínicos / prescrição</SectionTitle>
           <InstPanel style={{ marginBottom: 16 }}>
-            {p.inst
-              .filter((i) => i.t !== "lab")
-              .map((item, i) => (
-                <InstItemRow key={i}>
-                  <InstDot $color={INST_DOT_COLOR[item.t] ?? "#8c8c8c"} />
-                  <span>{item.d}</span>
-                  <InstTypeLabel>{INST_TYPE_LABEL[item.t] ?? item.t}</InstTypeLabel>
-                </InstItemRow>
-              ))}
+            {clinRxAtivos.map((item) => (
+              <InstItemRow key={item.id}>
+                <InstDot $color={INST_DOT_COLOR[item.t] ?? "#8c8c8c"} />
+                <span style={{ flex: 1 }}>{item.d}</span>
+                <InstTypeLabel>{INST_TYPE_LABEL[item.t] ?? item.t}</InstTypeLabel>
+                <Button
+                  size="small"
+                  type="text"
+                  style={{ marginLeft: 8, fontSize: 11, color: "#3a9c6e" }}
+                  loading={alertasLoading}
+                  onClick={() => handleReconhecerAlerta(item.id)}
+                >
+                  Reconhecer
+                </Button>
+              </InstItemRow>
+            ))}
           </InstPanel>
         </>
+      )}
+
+      {alertasAtivos.length === 0 && (
+        <Alert
+          type="success"
+          showIcon
+          icon={<CheckCircleOutlined />}
+          message="Todos os alertas reconhecidos"
+          style={{ marginBottom: 16 }}
+        />
+      )}
+
+      {alertasAtivos.length > 0 && (
+        <Button
+          block
+          type="primary"
+          loading={alertasLoading}
+          style={{ marginBottom: 16 }}
+          onClick={handleReconhecerTodos}
+        >
+          ✓ Reconhecer todos os alertas ativos
+        </Button>
       )}
 
       <div style={{ marginBottom: 16 }}>
@@ -839,7 +916,10 @@ export function PatientModal({
         </div>
         <Radio.Group
           value={antecipar}
-          onChange={(e) => setAntecipar(e.target.value)}
+          onChange={(e) => {
+            setAntecipar(e.target.value);
+            if (e.target.value === "sim") onTabChange("aval");
+          }}
         >
           <Radio value="sim">Sim – antecipar</Radio>
           <Radio value="nao">Não – manter programação</Radio>
