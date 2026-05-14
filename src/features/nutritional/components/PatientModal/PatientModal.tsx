@@ -29,11 +29,10 @@ import {
   saveAval,
   confirmAllergy,
   acknowledgePatient,
-  marcarAlertaReconhecido,
-  reverterAlerta,
-  fetchAlertas,
+  markAlertAcknowledged,
+  revertAlert,
+  fetchAlerts,
   acknowledgeAlert,
-  acknowledgeAllAlertas,
 } from "../../NutritionalSlice";
 import { MnutricManualForm } from "../MnutricManualForm/MnutricManualForm";
 import {
@@ -92,8 +91,8 @@ export function PatientModal({
   onTabChange,
 }: PatientModalProps) {
   const dispatch = useAppDispatch();
-  const alertasLoading = useAppSelector(
-    (state: any) => (state.nutritional.alertasLoading as Record<number, boolean>)[p?.id ?? -1] ?? false // eslint-disable-line @typescript-eslint/no-explicit-any
+  const alertsLoading = useAppSelector(
+    (state: any) => (state.nutritional.alertsLoading as Record<number, boolean>)[p?.id ?? -1] ?? false // eslint-disable-line @typescript-eslint/no-explicit-any
   );
 
   // ── NRS tab local state ───────────────────────────────────────────────
@@ -135,7 +134,7 @@ export function PatientModal({
 
   useEffect(() => {
     if (p && activeTab === "inst") {
-      dispatch(fetchAlertas(p.id));
+      dispatch(fetchAlerts(p.id));
     }
   }, [activeTab, p?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -227,25 +226,27 @@ export function PatientModal({
     );
   };
 
-  const handleReconhecerAlerta = async (alertaId: number) => {
-    dispatch(marcarAlertaReconhecido({ patientId: p.id, alertaId }));
+  const handleAcknowledgeAlert = async (alertId: number) => {
+    dispatch(markAlertAcknowledged({ patientId: p.id, alertId }));
     try {
-      await dispatch(acknowledgeAlert({ patientId: p.id, alertaId })).unwrap();
+      await dispatch(acknowledgeAlert({ patientId: p.id, alertId })).unwrap();
     } catch {
-      dispatch(reverterAlerta({ patientId: p.id, alertaId }));
+      dispatch(revertAlert({ patientId: p.id, alertId }));
       message.error("Erro ao reconhecer alerta.");
     }
   };
 
-  const handleReconhecerTodos = async () => {
-    const alertasAtivos = p.inst.filter((i) => !i.ack);
-    const ids = alertasAtivos.map((i) => i.id);
-    ids.forEach((id) => dispatch(marcarAlertaReconhecido({ patientId: p.id, alertaId: id })));
-    try {
-      await dispatch(acknowledgeAllAlertas({ patientId: p.id, alertaIds: ids })).unwrap();
-    } catch {
-      ids.forEach((id) => dispatch(reverterAlerta({ patientId: p.id, alertaId: id })));
-      message.error("Erro ao reconhecer alertas.");
+  const handleAcknowledgeAll = async () => {
+    const activeAlerts = p.inst.filter((i) => !i.ack);
+    for (const alert of activeAlerts) {
+      dispatch(markAlertAcknowledged({ patientId: p.id, alertId: alert.id }));
+      try {
+        await dispatch(acknowledgeAlert({ patientId: p.id, alertId: alert.id })).unwrap(); // eslint-disable-line no-await-in-loop
+      } catch {
+        dispatch(revertAlert({ patientId: p.id, alertId: alert.id }));
+        message.error("Erro ao reconhecer alertas.");
+        break;
+      }
     }
   };
 
@@ -791,9 +792,9 @@ export function PatientModal({
 
   // ── Tab: Instabilidade ────────────────────────────────────────────────
 
-  const alertasAtivos = p.inst.filter((i) => !i.ack);
-  const labAtivos = alertasAtivos.filter((i) => i.t === "lab");
-  const clinRxAtivos = alertasAtivos.filter((i) => i.t !== "lab");
+  const activeAlerts = p.inst.filter((i) => !i.ack);
+  const activeLab = activeAlerts.filter((i) => i.t === "lab");
+  const activeClinRx = activeAlerts.filter((i) => i.t !== "lab");
 
   const tabInst = (
     <div>
@@ -828,11 +829,11 @@ export function PatientModal({
         />
       )}
 
-      {labAtivos.length > 0 && (
+      {activeLab.length > 0 && (
         <>
           <SectionTitle>Exames laboratoriais</SectionTitle>
           <InstPanel style={{ marginBottom: 16 }}>
-            {labAtivos.map((item) => (
+            {activeLab.map((item) => (
               <InstItemRow key={item.id}>
                 <InstDot $color={INST_DOT_COLOR.lab} />
                 <span style={{ flex: 1 }}>{item.d}</span>
@@ -841,8 +842,8 @@ export function PatientModal({
                   size="small"
                   type="text"
                   style={{ marginLeft: 8, fontSize: 11, color: "#3a9c6e" }}
-                  loading={alertasLoading}
-                  onClick={() => handleReconhecerAlerta(item.id)}
+                  loading={alertsLoading}
+                  onClick={() => handleAcknowledgeAlert(item.id)}
                 >
                   Reconhecer
                 </Button>
@@ -852,11 +853,11 @@ export function PatientModal({
         </>
       )}
 
-      {clinRxAtivos.length > 0 && (
+      {activeClinRx.length > 0 && (
         <>
           <SectionTitle>Achados clínicos / prescrição</SectionTitle>
           <InstPanel style={{ marginBottom: 16 }}>
-            {clinRxAtivos.map((item) => (
+            {activeClinRx.map((item) => (
               <InstItemRow key={item.id}>
                 <InstDot $color={INST_DOT_COLOR[item.t] ?? "#8c8c8c"} />
                 <span style={{ flex: 1 }}>{item.d}</span>
@@ -865,8 +866,8 @@ export function PatientModal({
                   size="small"
                   type="text"
                   style={{ marginLeft: 8, fontSize: 11, color: "#3a9c6e" }}
-                  loading={alertasLoading}
-                  onClick={() => handleReconhecerAlerta(item.id)}
+                  loading={alertsLoading}
+                  onClick={() => handleAcknowledgeAlert(item.id)}
                 >
                   Reconhecer
                 </Button>
@@ -876,7 +877,7 @@ export function PatientModal({
         </>
       )}
 
-      {alertasAtivos.length === 0 && (
+      {activeAlerts.length === 0 && (
         <Alert
           type="success"
           showIcon
@@ -886,13 +887,13 @@ export function PatientModal({
         />
       )}
 
-      {alertasAtivos.length > 0 && (
+      {activeAlerts.length > 0 && (
         <Button
           block
           type="primary"
-          loading={alertasLoading}
+          loading={alertsLoading}
           style={{ marginBottom: 16 }}
-          onClick={handleReconhecerTodos}
+          onClick={handleAcknowledgeAll}
         >
           ✓ Reconhecer todos os alertas ativos
         </Button>

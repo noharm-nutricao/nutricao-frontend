@@ -7,9 +7,8 @@ interface NutritionalAPI {
   saveGlim: (nratendimento: number, data: GlimPayload) => any;
   saveAval: (nratendimento: number, data: AvalPayload) => any;
   acknowledgePatient: (nratendimento: number) => any;
-  getAlertas: (nratendimento: number) => any;
-  acknowledgeAlert: (nratendimento: number, alertaId: number) => any;
-  acknowledgeAllAlertas: (nratendimento: number) => any;
+  getAlerts: (nratendimento: number) => any;
+  acknowledgeAlert: (nratendimento: number, alertId: number) => any;
 };
 
 
@@ -74,7 +73,7 @@ api.nutritional.saveGlim = (nratendimento: number, data: GlimPayload) =>
  */
 api.nutritional.saveAval = (nratendimento: number, data: AvalPayload) =>
   instance.post(
-    `/patients/${nratendimento}/assessment`,
+    `/patients/${nratendimento}/assessments`,
     data,
     setHeaders(),
   );
@@ -116,19 +115,12 @@ export interface AvalPayload {
 };
 
 
-api.nutritional.getAlertas = (nratendimento: number) =>
-  instance.get(`/patients/${nratendimento}/alertas`, setHeaders());
+api.nutritional.getAlerts = (nratendimento: number) =>
+  instance.get(`/patients/${nratendimento}/alerts`, setHeaders());
 
-api.nutritional.acknowledgeAlert = (nratendimento: number, alertaId: number) =>
+api.nutritional.acknowledgeAlert = (nratendimento: number, alertId: number) =>
   instance.post(
-    `/patients/${nratendimento}/alertas/${alertaId}/acknowledge`,
-    {},
-    setHeaders(),
-  );
-
-api.nutritional.acknowledgeAllAlertas = (nratendimento: number) =>
-  instance.post(
-    `/patients/${nratendimento}/alertas/acknowledge-all`,
+    `/patients/${nratendimento}/alerts/${alertId}/acknowledge`,
     {},
     setHeaders(),
   );

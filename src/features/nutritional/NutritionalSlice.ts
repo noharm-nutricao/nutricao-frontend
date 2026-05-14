@@ -71,7 +71,7 @@ interface NutritionalState {
   loading: boolean;
   error: string | null;
   filtFila: string;
-  alertasLoading: Record<number, boolean>;
+  alertsLoading: Record<number, boolean>;
 }
 
 
@@ -81,7 +81,7 @@ const initialState: NutritionalState = {
   loading: false,
   error: null,
   filtFila: "",
-  alertasLoading: {},
+  alertsLoading: {},
 };
 
 const ALA_MAP: Record<string, AlaType> = {
@@ -185,19 +185,19 @@ export const saveMnutricManual = createAsyncThunk(
   }
 );
 
-export const fetchAlertas = createAsyncThunk(
-  "nutritional/fetchAlertas",
+export const fetchAlerts = createAsyncThunk(
+  "nutritional/fetchAlerts",
   async (patientId: number, thunkAPI) => {
     try {
-      const response = await api.nutritional.getAlertas(patientId);
+      const response = await api.nutritional.getAlerts(patientId);
       const raw: any[] = Array.isArray(response.data) ? response.data : response.data?.data ?? []; // eslint-disable-line @typescript-eslint/no-explicit-any
       return {
         patientId,
-        alertas: raw.map((i: any) => ({ id: i.id ?? 0, t: i.t, d: i.d, ack: i.ack ?? false })), // eslint-disable-line @typescript-eslint/no-explicit-any
+        alerts: raw.map((i: any) => ({ id: i.id ?? 0, t: i.t, d: i.d, ack: i.ack ?? false })), // eslint-disable-line @typescript-eslint/no-explicit-any
       };
     } catch (err) {
       const axiosErr = err as AxiosError<{ error?: string; message?: string }>;
-      const msg = axiosErr.response?.data?.error ?? axiosErr.response?.data?.message ?? axiosErr.message ?? "Erro ao carregar alertas";
+      const msg = axiosErr.response?.data?.error ?? axiosErr.response?.data?.message ?? axiosErr.message ?? "Error loading alerts";
       return thunkAPI.rejectWithValue(msg);
     }
   }
@@ -205,27 +205,13 @@ export const fetchAlertas = createAsyncThunk(
 
 export const acknowledgeAlert = createAsyncThunk(
   "nutritional/acknowledgeAlert",
-  async ({ patientId, alertaId }: { patientId: number; alertaId: number }, thunkAPI) => {
+  async ({ patientId, alertId }: { patientId: number; alertId: number }, thunkAPI) => {
     try {
-      await api.nutritional.acknowledgeAlert(patientId, alertaId);
-      return { patientId, alertaId };
+      await api.nutritional.acknowledgeAlert(patientId, alertId);
+      return { patientId, alertId };
     } catch (err) {
       const axiosErr = err as AxiosError<{ error?: string; message?: string }>;
-      const msg = axiosErr.response?.data?.error ?? axiosErr.response?.data?.message ?? axiosErr.message ?? "Erro ao reconhecer alerta";
-      return thunkAPI.rejectWithValue(msg);
-    }
-  }
-);
-
-export const acknowledgeAllAlertas = createAsyncThunk(
-  "nutritional/acknowledgeAllAlertas",
-  async ({ patientId, alertaIds }: { patientId: number; alertaIds: number[] }, thunkAPI) => {
-    try {
-      await api.nutritional.acknowledgeAllAlertas(patientId);
-      return { patientId, alertaIds };
-    } catch (err) {
-      const axiosErr = err as AxiosError<{ error?: string; message?: string }>;
-      const msg = axiosErr.response?.data?.error ?? axiosErr.response?.data?.message ?? axiosErr.message ?? "Erro ao reconhecer alertas";
+      const msg = axiosErr.response?.data?.error ?? axiosErr.response?.data?.message ?? axiosErr.message ?? "Error acknowledging alert";
       return thunkAPI.rejectWithValue(msg);
     }
   }
@@ -298,20 +284,20 @@ const nutritionalSlice = createSlice({
         });
       }
     },
-    marcarAlertaReconhecido(state, action: { payload: { patientId: number; alertaId: number } }) {
-      const { patientId, alertaId } = action.payload;
+    markAlertAcknowledged(state, action: { payload: { patientId: number; alertId: number } }) {
+      const { patientId, alertId } = action.payload;
       const patient = state.patients.find((p) => p.id === patientId);
       if (patient) {
-        const alerta = patient.inst.find((i) => i.id === alertaId);
-        if (alerta) alerta.ack = true;
+        const alert = patient.inst.find((i) => i.id === alertId);
+        if (alert) alert.ack = true;
       }
     },
-    reverterAlerta(state, action: { payload: { patientId: number; alertaId: number } }) {
-      const { patientId, alertaId } = action.payload;
+    revertAlert(state, action: { payload: { patientId: number; alertId: number } }) {
+      const { patientId, alertId } = action.payload;
       const patient = state.patients.find((p) => p.id === patientId);
       if (patient) {
-        const alerta = patient.inst.find((i) => i.id === alertaId);
-        if (alerta) alerta.ack = false;
+        const alert = patient.inst.find((i) => i.id === alertId);
+        if (alert) alert.ack = false;
       }
     },
     confirmAllergy(state, action: { payload: { id: number } }) {
@@ -343,27 +329,17 @@ const nutritionalSlice = createSlice({
         state.loading = false;
         state.error = (action.payload as string) ?? action.error.message ?? "Erro desconhecido";
       })
-      .addCase(fetchAlertas.pending, (state, action) => {
-        state.alertasLoading[action.meta.arg] = true;
+      .addCase(fetchAlerts.pending, (state, action) => {
+        state.alertsLoading[action.meta.arg] = true;
       })
-      .addCase(fetchAlertas.fulfilled, (state, action) => {
-        const { patientId, alertas } = action.payload;
-        state.alertasLoading[patientId] = false;
+      .addCase(fetchAlerts.fulfilled, (state, action) => {
+        const { patientId, alerts } = action.payload;
+        state.alertsLoading[patientId] = false;
         const patient = state.patients.find((p) => p.id === patientId);
-        if (patient) patient.inst = alertas;
+        if (patient) patient.inst = alerts;
       })
-      .addCase(fetchAlertas.rejected, (state, action) => {
-        state.alertasLoading[action.meta.arg] = false;
-      })
-      .addCase(acknowledgeAllAlertas.fulfilled, (state, action) => {
-        const { patientId, alertaIds } = action.payload;
-        const patient = state.patients.find((p) => p.id === patientId);
-        if (patient) {
-          alertaIds.forEach((id) => {
-            const a = patient.inst.find((i) => i.id === id);
-            if (a) a.ack = true;
-          });
-        }
+      .addCase(fetchAlerts.rejected, (state, action) => {
+        state.alertsLoading[action.meta.arg] = false;
       })
       .addCase(saveMnutricManual.fulfilled, (state, action) => {
         const { id, campo1 } = action.payload;
@@ -385,8 +361,8 @@ export const {
   saveAval,
   confirmAllergy,
   acknowledgePatient,
-  marcarAlertaReconhecido,
-  reverterAlerta,
+  markAlertAcknowledged,
+  revertAlert,
   setFiltFila,
   reset,
 } = nutritionalSlice.actions;
