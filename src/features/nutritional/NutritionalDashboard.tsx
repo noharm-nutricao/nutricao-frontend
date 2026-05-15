@@ -277,7 +277,12 @@ export function NutritionalDashboard() {
   const [filtAla, setFiltAla] = useState("all");
   const [filtSev, setFiltSev] = useState("");
   const [sortAsc, setSortAsc] = useState(false);
-  const [modalPatient, setModalPatient] = useState<NutritionalPatient | null>(null);
+  const [modalPatientId, setModalPatientId] = useState<number | null>(null);
+
+  // Deriva o paciente do Redux para que o modal re-renderize quando o estado mudar
+  const modalPatient = modalPatientId !== null
+    ? patients.find((p: NutritionalPatient) => p.id === modalPatientId) ?? null
+    : null;
 
   const fila1Patients = useAppSelector(selectFila1);
   const fila5Patients = useAppSelector(selectFila5);
@@ -339,7 +344,7 @@ export function NutritionalDashboard() {
   };
 
   const handleOpenTab = (patient: NutritionalPatient, tab: string) => {
-    setModalPatient(patient);
+    setModalPatientId(patient.id);
     setModalTab(tab);
   };
 
@@ -791,7 +796,7 @@ export function NutritionalDashboard() {
         acknowledged={acknowledged}
         activeTab={modalTab}
         onTabChange={setModalTab}
-        onClose={() => setModalPatient(null)}
+        onClose={() => setModalPatientId(null)}
       />
     </>
   );

@@ -1,112 +1,8 @@
-import apiModule, { instance, setHeaders } from '../api';
+import { instance, setHeaders } from '../api';
 
-
-interface NutritionalAPI {
-  getPatients: (params?: { setor?: number; ala?: string }) => any;
-  saveNrsNut: (nratendimento: number, data: NrsNutPayload) => any;
-  saveGlim: (nratendimento: number, data: GlimPayload) => any;
-  saveAval: (nratendimento: number, data: AvalPayload) => any;
-  getAssessmentHistory: (nratendimento: number) => any;
-  acknowledgePatient: (nratendimento: number) => any;
-};
-
-
-type API = typeof apiModule & {
-  nutritional: NutritionalAPI;
-};
-
-
-const api = apiModule as API;
-
-
-/**
- * Retrieves a list of patients with nutritional scores (Campo 1) calculated by the backend.
- * @param params - Optional filtering parameters:
- *   - setor: Sector ID for filtering
- *   - ala: Wing/ward identifier for filtering
- * @returns Promise with the list of patients and their nutritional scores
- */
-api.nutritional.getPatients = (params?: { setor?: number; ala?: string }) =>
-  instance.get('/patients', {
-    params,
-    ...setHeaders(),
-  });
-
-
-/**
- * Saves manual APACHE II and SOFA scores for ICU patients.
- * Triggers immediate recalculation of mNUTRIC and returns updated Campo 1.
- * Note: Component A of NRS-2002 is calculated automatically and not sent here.
- * @param nratendimento - Patient admission number
- * @param data - Payload with APACHE II (0-71) and SOFA (0-24) scores for ICU patients
- * @returns Promise with updated nutritional assessment
- */
-api.nutritional.saveNrsNut = (nratendimento: number, data: NrsNutPayload) =>
-  instance.put(
-    `/patients/${nratendimento}/nrs-nut`,
-    data,
-    setHeaders(),
-  );
-
-/**
- * Saves GLIM (Global Leadership Initiative on Malnutrition) diagnosis.
- * Stores phenotypes and etiologies of malnutrition for the patient.
- * @param nratendimento - Patient admission number
- * @param data - Payload with diagnosis level ('nd'=non-disease, 'mod'=moderate, 'grave'=severe), phenotypes, and etiologies
- * @returns Promise with saved GLIM diagnosis
- */
-api.nutritional.saveGlim = (nratendimento: number, data: GlimPayload) =>
-  instance.put(
-    `/patients/${nratendimento}/glim`,
-    data,
-    setHeaders(),
-  );
-
-
-/**
- * Records the nutritional assessment and feeding protocol for the patient.
- * Stores clinical conduct, monitoring frequency, and nutritional goals.
- * @param nratendimento - Patient admission number
- * @param data - Payload with conduct protocol, monitoring frequency (12h/24h/48h/7d/routine), and optional intake/caloric/protein goals
- * @returns Promise with saved assessment
- */
-api.nutritional.saveAval = (nratendimento: number, data: AvalPayload) =>
-  instance.post(
-    `/patients/${nratendimento}/assessment`,
-    data,
-    setHeaders(),
-  );
-
-/**
- * Retrieves the nutritional assessment history for the patient.
- * @param nratendimento - Patient admission number
- * @returns Promise with the assessment history list
- */
-api.nutritional.getAssessmentHistory = (nratendimento: number) =>
-  instance.get(
-    `/patients/${nratendimento}/assessment`,
-    setHeaders(),
-  );
-
-/**
- * Acknowledges/dismisses a nutritional alert for the patient.
- * Marks that a healthcare provider has reviewed and acknowledged the alert.
- * @param nratendimento - Patient admission number
- * @returns Promise with acknowledgment confirmation
- */
-api.nutritional.acknowledgePatient = (nratendimento: number) =>
-  instance.post(
-    `/patients/${nratendimento}/acknowledge`,
-    {},
-    setHeaders(),
-  );
-
-
-// Tipos
 export interface NrsNutPayload {
-  apache_ii: number; // APACHE II (0-71) -- apenas UTI
-  sofa: number; // SOFA (0-24) -- apenas UTI
-  // nrs_nut NAO existe: componente A e automatico via nutricional_nrs (hospital)
+  apache_ii: number; // APACHE II (0-71) -- ICU only
+  sofa: number; // SOFA (0-24) -- ICU only
 };
 
 export interface GlimPayload {
@@ -115,13 +11,57 @@ export interface GlimPayload {
   etiologias: string[];
 };
 
-export interface AvalPayload {
+// Field names match backend REST contract (PT) -- do not rename
+export interface AssessmentPayload {
   conduta: string;
-  frequencia: '12h' | '24h' | '48h' | '7d' | 'rotina';
+  prox_visita: '24h' | '48h' | 'semanal' | 'D7' | 'rotina'; // Changed from 'frequencia' to match backend model
   ingestao?: number;
   meta_kcal?: number;
   meta_prot?: number;
 };
 
+const nutritional = {
+  getPatients: (params?: { setor?: number; ala?: string }) =>
+    instance.get('/nutritional/patients', {
+      params,
+      ...setHeaders(),
+    }),
+
+  saveNrsNut: (patientId: number, data: NrsNutPayload) =>
+    instance.put(
+      `/patients/${patientId}/nrs-nut`,
+      data,
+      setHeaders(),
+    ),
+
+  saveGlim: (patientId: number, data: GlimPayload) =>
+    instance.put(
+      `/patients/${patientId}/glim`,
+      data,
+      setHeaders(),
+    ),
+
+  postAssessment: (patientId: number, data: AssessmentPayload) =>
+    instance.post(
+      `/nutritional/patients/${patientId}/assessments`,
+      data,
+      setHeaders(),
+    ),
+
+  getAssessmentHistory: (patientId: number) =>
+    instance.get(
+      `/nutritional/patients/${patientId}/assessments`,
+      setHeaders(),
+    ),
+
+  acknowledgePatient: (patientId: number) =>
+    instance.post(
+      `/patients/${patientId}/acknowledge`,
+      {},
+      setHeaders(),
+    ),
+};
+
+const api = { nutritional };
 
 export default api;

@@ -59,16 +59,16 @@ export const setHeaders = () => {
 
   return token
     ? {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "x-api-key": apiKey,
-        },
-      }
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "x-api-key": apiKey,
+      },
+    }
     : {
-        headers: {
-          "x-api-key": apiKey,
-        },
-      };
+      headers: {
+        "x-api-key": apiKey,
+      },
+    };
 };
 
 /**
@@ -267,8 +267,7 @@ const savePrescriptionDrug = (bearerToken, idPrescriptionDrug, params = {}) => {
 
 const suspendPrescriptionDrug = (bearerToken, idPrescriptionDrug, suspend) => {
   return instance.put(
-    `${endpoints.editPrescription}/drug/${idPrescriptionDrug}/suspend/${
-      suspend ? 1 : 0
+    `${endpoints.editPrescription}/drug/${idPrescriptionDrug}/suspend/${suspend ? 1 : 0
     }`,
     {},
     setHeaders(bearerToken),

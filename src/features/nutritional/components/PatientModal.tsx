@@ -13,6 +13,7 @@ import {
   Checkbox,
   Radio,
   Button,
+  message,
 } from "antd";
 import {
   WarningOutlined,
@@ -263,7 +264,7 @@ const HistEntry = styled.div`
     flex-wrap: wrap;
   }
 
-  .hist-conduta {
+  .hist-conduct {
     font-size: 12px;
     color: #2e3c5a;
     margin-bottom: 4px;
@@ -328,8 +329,7 @@ const NRS_A_OPTIONS = [
 const FREQ_OPTIONS = [
   { value: "24h", label: "24 horas" },
   { value: "48h", label: "48 horas" },
-  { value: "semanal", label: "Semanal" },
-  { value: "d7", label: "D7 programado" },
+  { value: "semanal", label: "7 dias (semanal)" },
   { value: "rotina", label: "Rotina" },
 ];
 
@@ -361,16 +361,16 @@ export function PatientModal({
   const [grad, setGrad] = useState<string>("");
   const [glimObs, setGlimObs] = useState("");
 
-  // ── Aval tab local state ──────────────────────────────────────────────
-  const [conduta, setConduta] = useState("");
+  // ── Assessment tab local state ─────────────────────────────────────────
+  const [conduct, setConduct] = useState("");
   const [freq, setFreq] = useState("24h");
   const [ingestion, setIngestion] = useState(50);
   const [kcal, setKcal] = useState<number | null>(null);
   const [prot, setProt] = useState<number | null>(null);
 
-  // ── Inst tab local state ──────────────────────────────────────────────
-  const [instObs, setInstObs] = useState("");
-  const [antecipar, setAntecipar] = useState<string>("");
+  // ── Instability tab local state ────────────────────────────────────────
+  const [instNotes, setInstNotes] = useState("");
+  const [anticipate, setAnticipate] = useState<string>("");
 
   // ── Initialize from patient ───────────────────────────────────────────
   useEffect(() => {
@@ -382,13 +382,13 @@ export function PatientModal({
     setEtiolSelected(p.glim_etiol ?? []);
     setGrad(p.glim_diag ?? "");
     setGlimObs("");
-    setConduta(p.conduta ?? "");
+    setConduct(p.conduta ?? "");
     setFreq("24h");
     setIngestion(50);
     setKcal(null);
     setProt(null);
-    setInstObs("");
-    setAntecipar("");
+    setInstNotes("");
+    setAnticipate("");
   }, [p?.id]);
 
   if (!p) return null;
@@ -458,17 +458,27 @@ export function PatientModal({
     dispatch(saveNrsNut({ id: p.id, nut: nrsA }));
   };
 
-  const handleSaveAval = () => {
-    dispatch(saveAssessment({ 
+  const handleSaveAssessment = async () => {
+    const result = await dispatch(saveAssessment({ 
       id: p.id, 
       data: { 
-        conduta, 
-        frequencia: freq as any, 
+        conduta: conduct, 
+        prox_visita: freq as '24h' | '48h' | 'semanal' | 'D7' | 'rotina', 
         ingestao: ingestion,
         meta_kcal: kcal || undefined,
         meta_prot: prot || undefined
       } 
     }));
+    if (saveAssessment.fulfilled.match(result)) {
+      message.success('Avaliação registrada com sucesso.');
+      setConduct('');
+      setFreq('24h');
+      setIngestion(50);
+      setKcal(null);
+      setProt(null);
+    } else {
+      message.error('Erro ao registrar avaliação. O servidor pode estar indisponível.');
+    }
   };
 
   const handleConfirmAllergy = () => {
@@ -918,8 +928,8 @@ export function PatientModal({
           Conduta
         </div>
         <Input.TextArea
-          value={conduta}
-          onChange={(e) => setConduta(e.target.value)}
+          value={conduct}
+          onChange={(e) => setConduct(e.target.value)}
           rows={3}
           placeholder="Descreva a conduta nutricional..."
         />
@@ -983,8 +993,8 @@ export function PatientModal({
 
       <Button
         type="primary"
-        onClick={handleSaveAval}
-        disabled={!conduta.trim()}
+        onClick={handleSaveAssessment}
+        disabled={!conduct.trim()}
         style={{ background: "#3a9c6e", borderColor: "#3a9c6e", marginBottom: 24 }}
       >
         Registrar Avaliação
@@ -1002,7 +1012,7 @@ export function PatientModal({
                 <span>{h.h}</span>
                 <span>{h.p}</span>
               </div>
-              <div className="hist-conduta">{h.c}</div>
+              <div className="hist-conduct">{h.c}</div>
               <div className="hist-meta">
                 <span>Freq: {h.freq}</span>
                 {h.ing !== null && <span style={{ marginLeft: 8 }}>Ingestão: {h.ing}%</span>}
@@ -1090,8 +1100,8 @@ export function PatientModal({
           Observações
         </div>
         <Input.TextArea
-          value={instObs}
-          onChange={(e) => setInstObs(e.target.value)}
+          value={instNotes}
+          onChange={(e) => setInstNotes(e.target.value)}
           rows={3}
           placeholder="Observações sobre instabilidade nutricional..."
         />
@@ -1102,8 +1112,8 @@ export function PatientModal({
           Antecipar reavaliação?
         </div>
         <Radio.Group
-          value={antecipar}
-          onChange={(e) => setAntecipar(e.target.value)}
+          value={anticipate}
+          onChange={(e) => setAnticipate(e.target.value)}
         >
           <Radio value="sim">Sim – antecipar</Radio>
           <Radio value="nao">Não – manter programação</Radio>
