@@ -18,6 +18,7 @@ type API = typeof apiModule & {
 
 
 const api = apiModule as API;
+api.nutritional = {} as NutritionalAPI;
 
 
 /**
@@ -57,7 +58,7 @@ api.nutritional.saveNrsNut = (nratendimento: number, data: NrsNutPayload) =>
  * @returns Promise with saved GLIM diagnosis
  */
 api.nutritional.saveGlim = (nratendimento: number, data: GlimPayload) =>
-  instance.put(
+  instance.post(
     `/nutritional/patients/${nratendimento}/glim`,
     data,
     setHeaders(),
@@ -108,7 +109,7 @@ export interface GlimPayload {
 
 export interface AvalPayload {
   conduta: string;
-  frequencia: '12h' | '24h' | '48h' | '7d' | 'rotina';
+  prox_visita: '12h' | '24h' | '48h' | '7d' | 'rotina';
   ingestao?: number;
   meta_kcal?: number;
   meta_prot?: number;

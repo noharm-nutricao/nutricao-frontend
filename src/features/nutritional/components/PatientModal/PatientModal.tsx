@@ -24,15 +24,15 @@ import {
   NutritionalPatient,
   AcknowledgedEntry,
   GlimDiag,
-  saveGlim,
   saveNrsNut,
-  saveAval,
   confirmAllergy,
   acknowledgePatient,
   markAlertAcknowledged,
   revertAlert,
   fetchAlerts,
   acknowledgeAlert,
+  saveGlimToServer,
+  saveAvalToServer,
 } from "../../NutritionalSlice";
 import { MnutricManualForm } from "../MnutricManualForm/MnutricManualForm";
 import {
@@ -192,7 +192,7 @@ export function PatientModal({
   const handleSaveGlim = () => {
     if (!glimCanSave) return;
     dispatch(
-      saveGlim({
+      saveGlimToServer({
         id: p.id,
         glim_fen: fenSelected,
         glim_etiol: etiolSelected,
@@ -206,7 +206,7 @@ export function PatientModal({
   };
 
   const handleSaveAval = () => {
-    dispatch(saveAval({ id: p.id, conduta, freq, ing: ingestion }));
+    dispatch(saveAvalToServer({ id: p.id, conduta, freq, ing: ingestion }));
   };
 
   const handleConfirmAllergy = () => {
