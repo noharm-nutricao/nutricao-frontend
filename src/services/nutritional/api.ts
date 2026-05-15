@@ -28,7 +28,7 @@ const api = apiModule as API;
  * @returns Promise with the list of patients and their nutritional scores
  */
 api.nutritional.getPatients = (params?: { setor?: number; ala?: string }) =>
-  instance.get('/patients', {
+  instance.get('/nutritional/patients', {
     params,
     ...setHeaders(),
   });
@@ -44,7 +44,7 @@ api.nutritional.getPatients = (params?: { setor?: number; ala?: string }) =>
  */
 api.nutritional.saveNrsNut = (nratendimento: number, data: NrsNutPayload) =>
   instance.put(
-    `/patients/${nratendimento}/nrs-nut`,
+    `/nutritional/patients/${nratendimento}/nrs-nut`,
     data,
     setHeaders(),
   );
@@ -58,7 +58,7 @@ api.nutritional.saveNrsNut = (nratendimento: number, data: NrsNutPayload) =>
  */
 api.nutritional.saveGlim = (nratendimento: number, data: GlimPayload) =>
   instance.put(
-    `/patients/${nratendimento}/glim`,
+    `/nutritional/patients/${nratendimento}/glim`,
     data,
     setHeaders(),
   );
@@ -73,7 +73,7 @@ api.nutritional.saveGlim = (nratendimento: number, data: GlimPayload) =>
  */
 api.nutritional.saveAval = (nratendimento: number, data: AvalPayload) =>
   instance.post(
-    `/patients/${nratendimento}/assessments`,
+    `/nutritional/patients/${nratendimento}/assessments`,
     data,
     setHeaders(),
   );
@@ -87,7 +87,7 @@ api.nutritional.saveAval = (nratendimento: number, data: AvalPayload) =>
  */
 api.nutritional.acknowledgePatient = (nratendimento: number) =>
   instance.post(
-    `/patients/${nratendimento}/acknowledge`,
+    `/nutritional/patients/${nratendimento}/acknowledge`,
     {},
     setHeaders(),
   );
@@ -116,11 +116,11 @@ export interface AvalPayload {
 
 
 api.nutritional.getAlerts = (nratendimento: number) =>
-  instance.get(`/patients/${nratendimento}/alerts`, setHeaders());
+  instance.get(`/nutritional/patients/${nratendimento}/alerts`, setHeaders());
 
 api.nutritional.acknowledgeAlert = (nratendimento: number, alertId: number) =>
   instance.post(
-    `/patients/${nratendimento}/alerts/${alertId}/acknowledge`,
+    `/nutritional/patients/${nratendimento}/alerts/${alertId}/acknowledge`,
     {},
     setHeaders(),
   );
