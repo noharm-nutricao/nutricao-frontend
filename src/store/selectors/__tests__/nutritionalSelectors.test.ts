@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { selectFila3, selectFila4 } from "../nutritionalSelectors";
+import { isFila3, isFila4, matchFila } from "features/nutritional/nutritionalUtils";
 import type { NutritionalPatient } from "features/nutritional/NutritionalSlice";
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
@@ -41,46 +42,32 @@ function makeState(patients: NutritionalPatient[]) {
   return { nutritional: { patients } } as any; // eslint-disable-line @typescript-eslint/no-explicit-any
 }
 
-// ─── selectFila3 ─────────────────────────────────────────────────────────────
+// ─── isFila3 (predicado puro) ────────────────────────────────────────────────
 
-describe("selectFila3", () => {
-  it("includes a patient whose inst[0].sev is 'cr'", () => {
-    const patient = makePatient({
-      inst: [{ id: 1, t: "lab", d: "Glicose alta", ack: false, sev: "cr" }],
-    });
-    const result = selectFila3(makeState([patient]));
-    expect(result).toHaveLength(1);
-    expect(result[0].id).toBe(patient.id);
+describe("isFila3", () => {
+  it("retorna true quando inst[0].sev === 'cr'", () => {
+    const p = makePatient({ inst: [{ id: 1, t: "lab", d: "X", ack: false, sev: "cr" }] });
+    expect(isFila3(p)).toBe(true);
   });
 
-  it("excludes a patient whose single inst has sev !== 'cr'", () => {
-    const patient = makePatient({
-      inst: [{ id: 2, t: "clin", d: "Edema leve", ack: false, sev: "al" }],
-    });
-    const result = selectFila3(makeState([patient]));
-    expect(result).toHaveLength(0);
+  it("retorna false quando inst tem sev !== 'cr' e length < 3", () => {
+    const p = makePatient({ inst: [{ id: 1, t: "lab", d: "X", ack: false, sev: "al" }] });
+    expect(isFila3(p)).toBe(false);
   });
 
-  it("excludes a patient with no inst items and no sev 'cr'", () => {
-    const patient = makePatient({ inst: [] });
-    const result = selectFila3(makeState([patient]));
-    expect(result).toHaveLength(0);
-  });
-
-  it("includes a patient with exactly 3 inst items regardless of sev", () => {
-    const patient = makePatient({
+  it("retorna true quando inst.length === 3 independente de sev", () => {
+    const p = makePatient({
       inst: [
-        { id: 1, t: "lab", d: "A", ack: false, sev: "md" },
+        { id: 1, t: "lab",  d: "A", ack: false, sev: "md" },
         { id: 2, t: "clin", d: "B", ack: false, sev: "bx" },
-        { id: 3, t: "rx", d: "C", ack: false },
+        { id: 3, t: "rx",   d: "C", ack: false },
       ],
     });
-    const result = selectFila3(makeState([patient]));
-    expect(result).toHaveLength(1);
+    expect(isFila3(p)).toBe(true);
   });
 
-  it("includes a patient with more than 3 inst items regardless of sev", () => {
-    const patient = makePatient({
+  it("retorna true quando inst.length > 3", () => {
+    const p = makePatient({
       inst: [
         { id: 1, t: "lab", d: "A", ack: false },
         { id: 2, t: "lab", d: "B", ack: false },
@@ -88,138 +75,177 @@ describe("selectFila3", () => {
         { id: 4, t: "lab", d: "D", ack: false },
       ],
     });
-    const result = selectFila3(makeState([patient]));
-    expect(result).toHaveLength(1);
+    expect(isFila3(p)).toBe(true);
   });
 
-  it("excludes a patient with 2 inst items and no sev 'cr'", () => {
-    const patient = makePatient({
+  it("retorna false quando inst vazio", () => {
+    expect(isFila3(makePatient({ inst: [] }))).toBe(false);
+  });
+
+  it("retorna false com 2 inst e nenhuma com sev 'cr'", () => {
+    const p = makePatient({
       inst: [
-        { id: 1, t: "lab", d: "A", ack: false, sev: "al" },
+        { id: 1, t: "lab",  d: "A", ack: false, sev: "al" },
         { id: 2, t: "clin", d: "B", ack: false, sev: "md" },
       ],
     });
-    const result = selectFila3(makeState([patient]));
-    expect(result).toHaveLength(0);
+    expect(isFila3(p)).toBe(false);
+  });
+});
+
+// ─── isFila4 (predicado puro) ────────────────────────────────────────────────
+
+describe("isFila4", () => {
+  it("retorna true quando glim_diag === 'grave'", () => {
+    expect(isFila4(makePatient({ glim_diag: "grave" }))).toBe(true);
   });
 
-  it("returns only matching patients from a mixed list", () => {
+  it("retorna false quando glim_diag === 'mod'", () => {
+    expect(isFila4(makePatient({ glim_diag: "mod" }))).toBe(false);
+  });
+
+  it("retorna false quando glim_diag === null", () => {
+    expect(isFila4(makePatient({ glim_diag: null }))).toBe(false);
+  });
+
+  it("retorna false quando glim_diag === 'nd'", () => {
+    expect(isFila4(makePatient({ glim_diag: "nd" }))).toBe(false);
+  });
+});
+
+// ─── selectFila3 (selector Redux) ────────────────────────────────────────────
+
+describe("selectFila3", () => {
+  it("inclui paciente com inst[0].sev === 'cr'", () => {
+    const p = makePatient({ inst: [{ id: 1, t: "lab", d: "Glicose alta", ack: false, sev: "cr" }] });
+    expect(selectFila3(makeState([p]))).toHaveLength(1);
+  });
+
+  it("exclui paciente sem inst cr e inst.length < 3", () => {
+    const p = makePatient({ inst: [{ id: 2, t: "clin", d: "Edema", ack: false, sev: "al" }] });
+    expect(selectFila3(makeState([p]))).toHaveLength(0);
+  });
+
+  it("retorna somente os pacientes correspondentes numa lista mista", () => {
     const p1 = makePatient({ id: 1, inst: [{ id: 1, t: "lab", d: "X", ack: false, sev: "cr" }] });
     const p2 = makePatient({ id: 2, inst: [] });
-    const p3 = makePatient({ id: 3, inst: [{ id: 2, t: "lab", d: "Y", ack: false }, { id: 3, t: "lab", d: "Z", ack: false }, { id: 4, t: "clin", d: "W", ack: false }] });
-    const result = selectFila3(makeState([p1, p2, p3]));
-    expect(result.map((p) => p.id)).toEqual([1, 3]);
+    const p3 = makePatient({ id: 3, inst: [
+      { id: 2, t: "lab",  d: "Y", ack: false },
+      { id: 3, t: "lab",  d: "Z", ack: false },
+      { id: 4, t: "clin", d: "W", ack: false },
+    ]});
+    expect(selectFila3(makeState([p1, p2, p3])).map((p) => p.id)).toEqual([1, 3]);
   });
 });
 
-// ─── selectFila4 ─────────────────────────────────────────────────────────────
+// ─── selectFila4 (selector Redux) ────────────────────────────────────────────
 
 describe("selectFila4", () => {
-  it("includes a patient with glim_diag === 'grave'", () => {
-    const patient = makePatient({ glim_diag: "grave" });
-    const result = selectFila4(makeState([patient]));
-    expect(result).toHaveLength(1);
-    expect(result[0].id).toBe(patient.id);
+  it("inclui paciente com glim_diag === 'grave'", () => {
+    expect(selectFila4(makeState([makePatient({ glim_diag: "grave" })]))).toHaveLength(1);
   });
 
-  it("excludes a patient with glim_diag === 'mod'", () => {
-    const patient = makePatient({ glim_diag: "mod" });
-    const result = selectFila4(makeState([patient]));
-    expect(result).toHaveLength(0);
+  it("exclui paciente com glim_diag === 'mod'", () => {
+    expect(selectFila4(makeState([makePatient({ glim_diag: "mod" })]))).toHaveLength(0);
   });
 
-  it("excludes a patient with glim_diag === null", () => {
-    const patient = makePatient({ glim_diag: null });
-    const result = selectFila4(makeState([patient]));
-    expect(result).toHaveLength(0);
+  it("exclui paciente com glim_diag === null", () => {
+    expect(selectFila4(makeState([makePatient({ glim_diag: null })]))).toHaveLength(0);
   });
 
-  it("excludes a patient with glim_diag === 'nd'", () => {
-    const patient = makePatient({ glim_diag: "nd" });
-    const result = selectFila4(makeState([patient]));
-    expect(result).toHaveLength(0);
-  });
-
-  it("returns only patients with glim_diag 'grave' from a mixed list", () => {
-    const p1 = makePatient({ id: 1, glim_diag: "grave" });
-    const p2 = makePatient({ id: 2, glim_diag: "mod" });
-    const p3 = makePatient({ id: 3, glim_diag: null });
-    const p4 = makePatient({ id: 4, glim_diag: "grave" });
-    const result = selectFila4(makeState([p1, p2, p3, p4]));
-    expect(result.map((p) => p.id)).toEqual([1, 4]);
+  it("retorna somente os pacientes 'grave' numa lista mista", () => {
+    const ps = [
+      makePatient({ id: 1, glim_diag: "grave" }),
+      makePatient({ id: 2, glim_diag: "mod" }),
+      makePatient({ id: 3, glim_diag: null }),
+      makePatient({ id: 4, glim_diag: "grave" }),
+    ];
+    expect(selectFila4(makeState(ps)).map((p) => p.id)).toEqual([1, 4]);
   });
 });
 
-// ─── Mutex: selecting a fila clears filtSev and vice-versa ───────────────────
-// This behaviour lives in the UI handlers (NutritionalFilter / NutritionalDashboard),
-// so we test the logic directly here to confirm correctness without needing React.
+// ─── matchFila (função pura exportada de nutritionalUtils) ───────────────────
 
-describe("mutex: fila vs. severity filter logic", () => {
-  /**
-   * Simulates handleFilaClick from NutritionalFilter.
-   * Returns the new [filtFila, filtSev] tuple.
-   */
-  function handleFilaClick(
-    currentFiltFila: string,
-    currentFiltSev: string,
-    clickedKey: string
-  ): [string, string] {
-    const newFiltSev = "";                                 // always clears sev
-    const newFiltFila = currentFiltFila === clickedKey ? "" : clickedKey; // toggle
-    return [newFiltFila, newFiltSev];
+describe("matchFila", () => {
+  it("retorna true quando filtFila está vazio (sem filtro)", () => {
+    expect(matchFila(makePatient(), "")).toBe(true);
+  });
+
+  it("retorna true quando filtFila === 'all'", () => {
+    expect(matchFila(makePatient(), "all")).toBe(true);
+  });
+
+  it("FILA3: retorna true para paciente com inst.sev 'cr'", () => {
+    const p = makePatient({ inst: [{ id: 1, t: "lab", d: "X", ack: false, sev: "cr" }] });
+    expect(matchFila(p, "FILA3")).toBe(true);
+  });
+
+  it("FILA3: retorna false para paciente sem critério Fila 3", () => {
+    expect(matchFila(makePatient({ inst: [] }), "FILA3")).toBe(false);
+  });
+
+  it("FILA4: retorna true para paciente com glim_diag 'grave'", () => {
+    expect(matchFila(makePatient({ glim_diag: "grave" }), "FILA4")).toBe(true);
+  });
+
+  it("FILA4: retorna false para paciente com glim_diag 'mod'", () => {
+    expect(matchFila(makePatient({ glim_diag: "mod" }), "FILA4")).toBe(false);
+  });
+
+  it("retorna true para chave desconhecida (forward-compatible)", () => {
+    expect(matchFila(makePatient(), "FILA99")).toBe(true);
+  });
+});
+
+// ─── Mutex: selecionar fila limpa filtSev e vice-versa ───────────────────────
+// Lógica dos handlers do NutritionalFilter testada como funções puras.
+
+describe("mutex: fila vs. severidade", () => {
+  function handleFilaClick(curFila: string, _curSev: string, key: string): [string, string] {
+    return [curFila === key ? "" : key, ""];
   }
 
-  /**
-   * Simulates handleSevClick from NutritionalFilter.
-   * Returns the new [filtFila, filtSev] tuple.
-   */
-  function handleSevClick(
-    currentFiltFila: string,
-    currentFiltSev: string,
-    clickedSev: string
-  ): [string, string] {
-    const newFiltFila = "";                                // always clears fila
-    const newFiltSev = currentFiltSev === clickedSev ? "" : clickedSev; // toggle
-    return [newFiltFila, newFiltSev];
+  function handleSevClick(curFila: string, curSev: string, sev: string): [string, string] {
+    return ["", curSev === sev ? "" : sev];
   }
 
-  it("selecting FILA3 clears filtSev", () => {
+  it("selecionar FILA3 limpa filtSev", () => {
     const [fila, sev] = handleFilaClick("", "cr", "FILA3");
     expect(fila).toBe("FILA3");
     expect(sev).toBe("");
   });
 
-  it("selecting FILA4 clears filtSev", () => {
+  it("selecionar FILA4 limpa filtSev", () => {
     const [fila, sev] = handleFilaClick("", "al", "FILA4");
     expect(fila).toBe("FILA4");
     expect(sev).toBe("");
   });
 
-  it("selecting a severity clears FILA3", () => {
+  it("selecionar severidade limpa FILA3", () => {
     const [fila, sev] = handleSevClick("FILA3", "", "cr");
     expect(fila).toBe("");
     expect(sev).toBe("cr");
   });
 
-  it("selecting a severity clears FILA4", () => {
+  it("selecionar severidade limpa FILA4", () => {
     const [fila, sev] = handleSevClick("FILA4", "", "al");
     expect(fila).toBe("");
     expect(sev).toBe("al");
   });
 
-  it("clicking the active FILA3 again toggles it off (deselect)", () => {
+  it("clicar FILA3 ativa novamente desativa (toggle off)", () => {
     const [fila, sev] = handleFilaClick("FILA3", "", "FILA3");
     expect(fila).toBe("");
     expect(sev).toBe("");
   });
 
-  it("clicking the active FILA4 again toggles it off (deselect)", () => {
+  it("clicar FILA4 ativa novamente desativa (toggle off)", () => {
     const [fila, sev] = handleFilaClick("FILA4", "", "FILA4");
     expect(fila).toBe("");
     expect(sev).toBe("");
   });
 
-  it("switching from FILA3 to FILA4 sets fila to FILA4 and clears sev", () => {
+  it("trocar de FILA3 para FILA4 atualiza fila e limpa sev", () => {
     const [fila, sev] = handleFilaClick("FILA3", "", "FILA4");
     expect(fila).toBe("FILA4");
     expect(sev).toBe("");

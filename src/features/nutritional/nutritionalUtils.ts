@@ -94,6 +94,40 @@ export const GLIM_ETIOL_LABEL: Record<string, string> = {
   doenca_cronica:   "Doença crônica",       // chave retornada pela API
 };
 
+// ── Fila predicates — single source of truth ────────────────────────────────
+// Used by both the Redux selectors and matchFila; change criteria in one place.
+
+export function isFila1(p: Pick<NutritionalPatient, "sev" | "haval">): boolean {
+  return (p.sev === "cr" || p.sev === "al") && p.haval > 18;
+}
+
+export function isFila2(p: Pick<NutritionalPatient, "haval">): boolean {
+  return p.haval >= 12 && p.haval <= 24;
+}
+
+export function isFila3(p: Pick<NutritionalPatient, "inst">): boolean {
+  return p.inst.some(i => i.sev === "cr") || p.inst.length >= 3;
+}
+
+export function isFila4(p: Pick<NutritionalPatient, "glim_diag">): boolean {
+  return p.glim_diag === "grave";
+}
+
+export function isFila5(p: Pick<NutritionalPatient, "d7">): boolean {
+  return p.d7 === true;
+}
+
+/** Pure filter function — safe to use outside React (no closures over state). */
+export function matchFila(p: NutritionalPatient, filtFila: string): boolean {
+  if (!filtFila || filtFila === "all") return true;
+  if (filtFila === "FILA1") return isFila1(p);
+  if (filtFila === "FILA2") return isFila2(p);
+  if (filtFila === "FILA3") return isFila3(p);
+  if (filtFila === "FILA4") return isFila4(p);
+  if (filtFila === "FILA5") return isFila5(p);
+  return true;
+}
+
 export function sevMNUTRIC(v: number): SeverityType {
   if (v >= 7) return "cr";
   if (v >= 5) return "al";

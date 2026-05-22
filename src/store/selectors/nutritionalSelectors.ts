@@ -1,31 +1,28 @@
 import { createSelector } from '@reduxjs/toolkit';
 import { IRootState } from '../index';
+import { isFila1, isFila2, isFila3, isFila4, isFila5 } from 'features/nutritional/nutritionalUtils';
 
 export const selectFila1 = createSelector(
     (s: IRootState) => s.nutritional.patients,
-    (patients) => patients.filter(p =>
-        (p.sev === 'cr' || p.sev === 'al') && (p.haval ?? 0) > 18
-    )
+    (patients) => patients.filter(isFila1)
 );
 
 export const selectFila2 = createSelector(
     (s: IRootState) => s.nutritional.patients,
-    (patients) => patients.filter(p => (p.haval ?? 0) >= 12 && (p.haval ?? 0) <= 24)
+    (patients) => patients.filter(isFila2)
 );
 
 export const selectFila3 = createSelector(
     (s: IRootState) => s.nutritional.patients,
-    (patients) => patients.filter(p =>
-        p.inst.some(i => i.sev === 'cr') || p.inst.length >= 3
-    )
+    (patients) => patients.filter(isFila3)
 );
 
 export const selectFila4 = createSelector(
     (s: IRootState) => s.nutritional.patients,
-    (patients) => patients.filter(p => p.glim_diag === 'grave')
+    (patients) => patients.filter(isFila4)
 );
 
 export const selectFila5 = createSelector(
     (s: IRootState) => s.nutritional.patients,
-    (patients) => patients.filter(p => p.d7 === true)
+    (patients) => patients.filter(isFila5)
 );
