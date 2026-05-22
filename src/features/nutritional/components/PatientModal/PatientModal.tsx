@@ -14,20 +14,25 @@ import {
   Radio,
   Button,
   Tooltip,
+  message,
 } from "antd";
 import { WarningOutlined, CheckCircleOutlined, ClockCircleOutlined } from "@ant-design/icons";
-import { useAppDispatch } from "src/store";
+import { useAppDispatch, useAppSelector } from "src/store";
 import { FeatureService } from "src/services/FeatureService";
 import Feature from "src/models/Feature";
 import {
   NutritionalPatient,
   AcknowledgedEntry,
   GlimDiag,
-  saveGlim,
   saveNrsNut,
-  saveAval,
   confirmAllergy,
   acknowledgePatient,
+  markAlertAcknowledged,
+  revertAlert,
+  fetchAlerts,
+  acknowledgeAlert,
+  saveGlimToServer,
+  saveAvalToServer,
 } from "../../NutritionalSlice";
 import { MnutricManualForm } from "../MnutricManualForm/MnutricManualForm";
 import {
@@ -86,6 +91,9 @@ export function PatientModal({
   onTabChange,
 }: PatientModalProps) {
   const dispatch = useAppDispatch();
+  const alertsLoading = useAppSelector(
+    (state: any) => (state.nutritional.alertsLoading as Record<number, boolean>)[p?.id ?? -1] ?? false // eslint-disable-line @typescript-eslint/no-explicit-any
+  );
 
   // ── NRS tab local state ───────────────────────────────────────────────
   const [nrsA, setNrsA] = useState(0);
@@ -123,6 +131,12 @@ export function PatientModal({
     setInstObs("");
     setAntecipar("");
   }, [p?.id]);
+
+  useEffect(() => {
+    if (p && activeTab === "inst") {
+      dispatch(fetchAlerts(p.id));
+    }
+  }, [activeTab, p?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!p) return null;
 
@@ -178,7 +192,7 @@ export function PatientModal({
   const handleSaveGlim = () => {
     if (!glimCanSave) return;
     dispatch(
-      saveGlim({
+      saveGlimToServer({
         id: p.id,
         glim_fen: fenSelected,
         glim_etiol: etiolSelected,
@@ -192,7 +206,7 @@ export function PatientModal({
   };
 
   const handleSaveAval = () => {
-    dispatch(saveAval({ id: p.id, conduta, freq, ing: ingestion }));
+    dispatch(saveAvalToServer({ id: p.id, conduta, freq, ing: ingestion }));
   };
 
   const handleConfirmAllergy = () => {
@@ -210,6 +224,30 @@ export function PatientModal({
         prof: "Nutr. Silva",
       })
     );
+  };
+
+  const handleAcknowledgeAlert = async (alertId: number) => {
+    dispatch(markAlertAcknowledged({ patientId: p.id, alertId }));
+    try {
+      await dispatch(acknowledgeAlert({ patientId: p.id, alertId })).unwrap();
+    } catch {
+      dispatch(revertAlert({ patientId: p.id, alertId }));
+      message.error("Erro ao reconhecer alerta.");
+    }
+  };
+
+  const handleAcknowledgeAll = async () => {
+    const activeAlerts = p.inst.filter((i) => !i.ack);
+    for (const alert of activeAlerts) {
+      dispatch(markAlertAcknowledged({ patientId: p.id, alertId: alert.id }));
+      try {
+        await dispatch(acknowledgeAlert({ patientId: p.id, alertId: alert.id })).unwrap(); // eslint-disable-line no-await-in-loop
+      } catch {
+        dispatch(revertAlert({ patientId: p.id, alertId: alert.id }));
+        message.error("Erro ao reconhecer alertas.");
+        break;
+      }
+    }
   };
 
   // ── Tab: Resumo ───────────────────────────────────────────────────────
@@ -754,6 +792,10 @@ export function PatientModal({
 
   // ── Tab: Instabilidade ────────────────────────────────────────────────
 
+  const activeAlerts = p.inst.filter((i) => !i.ack);
+  const activeLab = activeAlerts.filter((i) => i.t === "lab");
+  const activeClinRx = activeAlerts.filter((i) => i.t !== "lab");
+
   const tabInst = (
     <div>
       {p.alergia && !p.alOk && (
@@ -787,38 +829,74 @@ export function PatientModal({
         />
       )}
 
-      {p.inst.filter((i) => i.t === "lab").length > 0 && (
+      {activeLab.length > 0 && (
         <>
           <SectionTitle>Exames laboratoriais</SectionTitle>
           <InstPanel style={{ marginBottom: 16 }}>
-            {p.inst
-              .filter((i) => i.t === "lab")
-              .map((item, i) => (
-                <InstItemRow key={i}>
-                  <InstDot $color={INST_DOT_COLOR.lab} />
-                  <span>{item.d}</span>
-                  <InstTypeLabel>Laboratório</InstTypeLabel>
-                </InstItemRow>
-              ))}
+            {activeLab.map((item) => (
+              <InstItemRow key={item.id}>
+                <InstDot $color={INST_DOT_COLOR.lab} />
+                <span style={{ flex: 1 }}>{item.d}</span>
+                <InstTypeLabel>Laboratório</InstTypeLabel>
+                <Button
+                  size="small"
+                  type="text"
+                  style={{ marginLeft: 8, fontSize: 11, color: "#3a9c6e" }}
+                  loading={alertsLoading}
+                  onClick={() => handleAcknowledgeAlert(item.id)}
+                >
+                  Reconhecer
+                </Button>
+              </InstItemRow>
+            ))}
           </InstPanel>
         </>
       )}
 
-      {p.inst.filter((i) => i.t !== "lab").length > 0 && (
+      {activeClinRx.length > 0 && (
         <>
           <SectionTitle>Achados clínicos / prescrição</SectionTitle>
           <InstPanel style={{ marginBottom: 16 }}>
-            {p.inst
-              .filter((i) => i.t !== "lab")
-              .map((item, i) => (
-                <InstItemRow key={i}>
-                  <InstDot $color={INST_DOT_COLOR[item.t] ?? "#8c8c8c"} />
-                  <span>{item.d}</span>
-                  <InstTypeLabel>{INST_TYPE_LABEL[item.t] ?? item.t}</InstTypeLabel>
-                </InstItemRow>
-              ))}
+            {activeClinRx.map((item) => (
+              <InstItemRow key={item.id}>
+                <InstDot $color={INST_DOT_COLOR[item.t] ?? "#8c8c8c"} />
+                <span style={{ flex: 1 }}>{item.d}</span>
+                <InstTypeLabel>{INST_TYPE_LABEL[item.t] ?? item.t}</InstTypeLabel>
+                <Button
+                  size="small"
+                  type="text"
+                  style={{ marginLeft: 8, fontSize: 11, color: "#3a9c6e" }}
+                  loading={alertsLoading}
+                  onClick={() => handleAcknowledgeAlert(item.id)}
+                >
+                  Reconhecer
+                </Button>
+              </InstItemRow>
+            ))}
           </InstPanel>
         </>
+      )}
+
+      {activeAlerts.length === 0 && (
+        <Alert
+          type="success"
+          showIcon
+          icon={<CheckCircleOutlined />}
+          message="Todos os alertas reconhecidos"
+          style={{ marginBottom: 16 }}
+        />
+      )}
+
+      {activeAlerts.length > 0 && (
+        <Button
+          block
+          type="primary"
+          loading={alertsLoading}
+          style={{ marginBottom: 16 }}
+          onClick={handleAcknowledgeAll}
+        >
+          ✓ Reconhecer todos os alertas ativos
+        </Button>
       )}
 
       <div style={{ marginBottom: 16 }}>
@@ -839,7 +917,10 @@ export function PatientModal({
         </div>
         <Radio.Group
           value={antecipar}
-          onChange={(e) => setAntecipar(e.target.value)}
+          onChange={(e) => {
+            setAntecipar(e.target.value);
+            if (e.target.value === "sim") onTabChange("aval");
+          }}
         >
           <Radio value="sim">Sim – antecipar</Radio>
           <Radio value="nao">Não – manter programação</Radio>
