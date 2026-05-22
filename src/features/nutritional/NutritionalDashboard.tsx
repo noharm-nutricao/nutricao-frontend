@@ -16,7 +16,7 @@ import {
 } from "@ant-design/icons";
 
 import { useAppDispatch, useAppSelector } from "src/store";
-import { selectFila1, selectFila2, selectFila5 } from "src/store/selectors/nutritionalSelectors";
+import { selectFila1, selectFila2, selectFila3, selectFila4, selectFila5 } from "src/store/selectors/nutritionalSelectors";
 import { FeatureService } from "src/services/FeatureService";
 import Feature from "src/models/Feature";
 import { PageHeader } from "src/styles/PageHeader.style";
@@ -53,6 +53,8 @@ export function NutritionalDashboard() {
   const filtFila = useAppSelector((state: any) => state.nutritional.filtFila as string);
   const fila1Patients = useAppSelector(selectFila1);
   const fila2Patients = useAppSelector(selectFila2);
+  const fila3Patients = useAppSelector(selectFila3);
+  const fila4Patients = useAppSelector(selectFila4);
   const fila5Patients = useAppSelector(selectFila5);
   const { patients, acknowledged, loading, error } = useAppSelector(
     (state: any) => state.nutritional
@@ -115,6 +117,8 @@ export function NutritionalDashboard() {
     if (!filtFila || filtFila === "all") return true;
     if (filtFila === "FILA1") return (p.sev === "cr" || p.sev === "al") && p.haval > 18;
     if (filtFila === "FILA2") return p.haval >= 12 && p.haval <= 24;
+    if (filtFila === "FILA3") return p.inst.some(i => i.sev === "cr") || p.inst.length >= 3;
+    if (filtFila === "FILA4") return p.glim_diag === "grave";
     if (filtFila === "FILA5") return p.d7 === true;
     return true;
   };
@@ -188,6 +192,8 @@ export function NutritionalDashboard() {
         countsFila={{
           FILA1: fila1Patients.length,
           FILA2: fila2Patients.length,
+          FILA3: fila3Patients.length,
+          FILA4: fila4Patients.length,
           FILA5: fila5Patients.length,
         }}
         sortAsc={sortAsc}

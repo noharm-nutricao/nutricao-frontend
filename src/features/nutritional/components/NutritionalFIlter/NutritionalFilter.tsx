@@ -70,16 +70,16 @@ export function NutritionalFilter({
         {/* Fila */}
         <FilterGroup>
           <FilterLabel>Fila</FilterLabel>
-          {FILA_BTNS.map(({ key, label }) => (
+          {FILA_BTNS.map(({ key, label, color }) => (
             <FilterBtn
               key={key}
               $active={filtFila === key}
-              $color="#7e57c2"
+              $color={color}
               onClick={() => handleFilaClick(key)}
             >
               {label}
               <span style={{
-                background: filtFila === key ? '#7e57c2' : '#e0e0e0',
+                background: filtFila === key ? color : '#e0e0e0',
                 color: filtFila === key ? '#fff' : '#696766',
                 borderRadius: '10px',
                 padding: '1px 6px',

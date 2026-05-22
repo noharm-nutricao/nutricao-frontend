@@ -60,9 +60,11 @@ export const EMPTY_BEDS: Record<AlaType, string[]> = {
 };
 
 export const FILA_BTNS = [
-  { key: "FILA1", label: "Alta Prioridade" },
-  { key: "FILA2", label: "Avaliar 24h" },
-  { key: "FILA5", label: "D7 pendente" },
+  { key: "FILA1", label: "Alta Prioridade", color: "#7e57c2" },
+  { key: "FILA2", label: "Avaliar 24h",     color: "#7e57c2" },
+  { key: "FILA3", label: "Alerta Crítico",  color: "#c41e3a" },
+  { key: "FILA4", label: "Desnut. Grave",   color: "#7f0d1f" },
+  { key: "FILA5", label: "D7 pendente",     color: "#7e57c2" },
 ];
 
 export const RISCO_BTNS = [
