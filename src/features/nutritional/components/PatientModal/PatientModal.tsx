@@ -27,12 +27,17 @@ import {
   saveNrsNut,
   confirmAllergy,
   acknowledgePatient,
+<<<<<<< Updated upstream
   markAlertAcknowledged,
   revertAlert,
   fetchAlerts,
   acknowledgeAlert,
   saveGlimToServer,
   saveAvalToServer,
+=======
+  marcarAlertaReconhecido,
+  reverterAlerta,
+>>>>>>> Stashed changes
 } from "../../NutritionalSlice";
 import { MnutricManualForm } from "../MnutricManualForm/MnutricManualForm";
 import {
@@ -112,7 +117,6 @@ export function PatientModal({
   const [prot, setProt] = useState<number | null>(null);
 
   // ── Inst tab local state ──────────────────────────────────────────────
-  const [instObs, setInstObs] = useState("");
   const [antecipar, setAntecipar] = useState<string>("");
 
   // ── Initialize from patient ───────────────────────────────────────────
@@ -128,7 +132,6 @@ export function PatientModal({
     setIngestion(50);
     setKcal(null);
     setProt(null);
-    setInstObs("");
     setAntecipar("");
   }, [p?.id]);
 
@@ -792,43 +795,53 @@ export function PatientModal({
 
   // ── Tab: Instabilidade ────────────────────────────────────────────────
 
+<<<<<<< Updated upstream
   const activeAlerts = p.inst.filter((i) => !i.ack);
   const activeLab = activeAlerts.filter((i) => i.t === "lab");
   const activeClinRx = activeAlerts.filter((i) => i.t !== "lab");
+=======
+  const handleReconhecerAlerta = async (alertaId: number) => {
+    dispatch(marcarAlertaReconhecido({ patientId: p.id, alertaId }));
+    try {
+      // Reutiliza mecanismo FE-14 (optimistic update)
+      await dispatch(acknowledgePatient({
+        id: p.id,
+        hora: new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
+        prof: "Nutr. Silva",
+      }));
+    } catch {
+      dispatch(reverterAlerta({ patientId: p.id, alertaId }));
+    }
+  };
+>>>>>>> Stashed changes
 
   const tabInst = (
     <div>
+      {/* Banner amarelo - alergia não confirmada */}
       {p.alergia && !p.alOk && (
-        <Alert
-          type="warning"
-          showIcon
-          icon={<WarningOutlined />}
-          message={`Alergia registrada: ${p.alergia}`}
-          description="É necessário confirmar ciência da alergia antes de prosseguir."
-          action={
-            <Button
-              size="small"
-              type="primary"
-              danger
-              onClick={handleConfirmAllergy}
-            >
-              Confirmar ciência
-            </Button>
-          }
-          style={{ marginBottom: 16 }}
-        />
+        <div
+          style={{
+            background: "#fffbe6",
+            border: "1px solid #ffe58f",
+            borderRadius: 6,
+            padding: "10px 14px",
+            marginBottom: 16,
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+          }}
+        >
+          <WarningOutlined style={{ color: "#d48806", fontSize: 16 }} />
+          <span style={{ flex: 1, fontSize: 12, color: "#614700" }}>
+            Alergia não confirmada: <strong>{p.alergia}</strong>
+          </span>
+          <Button size="small" type="primary" danger onClick={handleConfirmAllergy}>
+            Confirmar ciência
+          </Button>
+        </div>
       )}
 
-      {p.alergia && p.alOk && (
-        <Alert
-          type="success"
-          showIcon
-          icon={<CheckCircleOutlined />}
-          message={`Alergia confirmada: ${p.alergia}`}
-          style={{ marginBottom: 16 }}
-        />
-      )}
-
+<<<<<<< Updated upstream
       {activeLab.length > 0 && (
         <>
           <SectionTitle>Exames laboratoriais</SectionTitle>
@@ -849,10 +862,40 @@ export function PatientModal({
                 </Button>
               </InstItemRow>
             ))}
+=======
+      {/* Seção: Exames laboratoriais */}
+      {p.inst.filter((i) => i.t === "lab").length > 0 && (
+        <>
+          <SectionTitle>Exames laboratoriais</SectionTitle>
+          <InstPanel style={{ marginBottom: 16 }}>
+            {p.inst
+              .filter((i) => i.t === "lab")
+              .map((item) => (
+                <InstItemRow key={item.id} style={{ opacity: item.reconhecido ? 0.5 : 1 }}>
+                  <InstDot $color={INST_DOT_COLOR.lab} />
+                  <span style={{ flex: 1 }}>{item.d}</span>
+                  <InstTypeLabel>lab</InstTypeLabel>
+                  {!item.reconhecido && (
+                    <Button
+                      size="small"
+                      type="primary"
+                      style={{ fontSize: 10, marginLeft: 8 }}
+                      onClick={() => handleReconhecerAlerta(item.id)}
+                    >
+                      Reconhecer
+                    </Button>
+                  )}
+                  {item.reconhecido && (
+                    <CheckCircleOutlined style={{ color: "#3a9c6e", marginLeft: 8 }} />
+                  )}
+                </InstItemRow>
+              ))}
+>>>>>>> Stashed changes
           </InstPanel>
         </>
       )}
 
+<<<<<<< Updated upstream
       {activeClinRx.length > 0 && (
         <>
           <SectionTitle>Achados clínicos / prescrição</SectionTitle>
@@ -873,10 +916,40 @@ export function PatientModal({
                 </Button>
               </InstItemRow>
             ))}
+=======
+      {/* Seção: Achados clínicos / prescrição */}
+      {p.inst.filter((i) => i.t !== "lab").length > 0 && (
+        <>
+          <SectionTitle>Achados clínicos / prescrição</SectionTitle>
+          <InstPanel style={{ marginBottom: 16 }}>
+            {p.inst
+              .filter((i) => i.t !== "lab")
+              .map((item) => (
+                <InstItemRow key={item.id} style={{ opacity: item.reconhecido ? 0.5 : 1 }}>
+                  <InstDot $color={INST_DOT_COLOR[item.t] ?? "#8c8c8c"} />
+                  <span style={{ flex: 1 }}>{item.d}</span>
+                  <InstTypeLabel>{item.t}</InstTypeLabel>
+                  {!item.reconhecido && (
+                    <Button
+                      size="small"
+                      type="primary"
+                      style={{ fontSize: 10, marginLeft: 8 }}
+                      onClick={() => handleReconhecerAlerta(item.id)}
+                    >
+                      Reconhecer
+                    </Button>
+                  )}
+                  {item.reconhecido && (
+                    <CheckCircleOutlined style={{ color: "#3a9c6e", marginLeft: 8 }} />
+                  )}
+                </InstItemRow>
+              ))}
+>>>>>>> Stashed changes
           </InstPanel>
         </>
       )}
 
+<<<<<<< Updated upstream
       {activeAlerts.length === 0 && (
         <Alert
           type="success"
@@ -911,6 +984,9 @@ export function PatientModal({
         />
       </div>
 
+=======
+      {/* Radio: Antecipar reavaliação */}
+>>>>>>> Stashed changes
       <div style={{ marginBottom: 16 }}>
         <div style={{ fontSize: 12, fontWeight: 600, color: "#595959", marginBottom: 6 }}>
           Antecipar reavaliação?
@@ -922,8 +998,8 @@ export function PatientModal({
             if (e.target.value === "sim") onTabChange("aval");
           }}
         >
-          <Radio value="sim">Sim – antecipar</Radio>
-          <Radio value="nao">Não – manter programação</Radio>
+          <Radio value="sim">Sim</Radio>
+          <Radio value="nao">Não</Radio>
         </Radio.Group>
       </div>
     </div>

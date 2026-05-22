@@ -10,7 +10,12 @@ export interface InstItem {
   id: number;
   t: "lab" | "clin" | "rx";
   d: string;
+<<<<<<< Updated upstream
   ack: boolean;
+=======
+  id: number;
+  reconhecido?: boolean;
+>>>>>>> Stashed changes
 }
 
 export interface HistEntry {
@@ -123,6 +128,7 @@ function normalizeApiPatient(raw: any): NutritionalPatient {
     // Acompanhamento
     haval: raw.haval ?? 999,
     glim_diag: raw.glim_diag ?? null,
+<<<<<<< Updated upstream
     glim_fen: (raw.glim_fen ?? []).map((k: string) => FEN_FROM_BACKEND[k] ?? k),
     glim_etiol: (raw.glim_etiol ?? []).map((k: string) => ETIOL_FROM_BACKEND[k] ?? k),
     inst: (raw.inst ?? []).map((i: any) => ({ // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -131,6 +137,11 @@ function normalizeApiPatient(raw: any): NutritionalPatient {
       d: i.d,
       ack: i.ack ?? false,
     })),
+=======
+    glim_fen: raw.glim_fen ?? [],
+    glim_etiol: raw.glim_etiol ?? [],
+    inst: (raw.inst ?? []).map((i: any, idx: number) => ({ ...i, id: i.id ?? idx, reconhecido: i.reconhecido ?? false })),
+>>>>>>> Stashed changes
     conduta: raw.conduta ?? "",
     alergia: raw.alergia ?? null,
     alOk: raw.al_ok ?? raw.alOk ?? true,
@@ -399,6 +410,22 @@ const nutritionalSlice = createSlice({
         patient.inst = patient.inst.filter((i) => !i.d.includes("Alergia"));
       }
     },
+    marcarAlertaReconhecido(state, action: { payload: { patientId: number; alertaId: number } }) {
+      const { patientId, alertaId } = action.payload;
+      const patient = state.patients.find((p) => p.id === patientId);
+      if (patient) {
+        const item = patient.inst.find((i) => i.id === alertaId);
+        if (item) item.reconhecido = true;
+      }
+    },
+    reverterAlerta(state, action: { payload: { patientId: number; alertaId: number } }) {
+      const { patientId, alertaId } = action.payload;
+      const patient = state.patients.find((p) => p.id === patientId);
+      if (patient) {
+        const item = patient.inst.find((i) => i.id === alertaId);
+        if (item) item.reconhecido = false;
+      }
+    },
     setFiltFila(state, action: { payload: string }) {
       state.filtFila = action.payload;
     },
@@ -475,8 +502,13 @@ export const {
   saveAval,
   confirmAllergy,
   acknowledgePatient,
+<<<<<<< Updated upstream
   markAlertAcknowledged,
   revertAlert,
+=======
+  marcarAlertaReconhecido,
+  reverterAlerta,
+>>>>>>> Stashed changes
   setFiltFila,
   reset,
 } = nutritionalSlice.actions;
