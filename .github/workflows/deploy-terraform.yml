@@ -1,0 +1,59 @@
+name: Deploy frontend to S3 via Terraform
+
+on:
+  push:
+    branches: [ main, infra-terraform ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ vars.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ vars.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Install AWS CLI
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y awscli
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: '1.5.0'
+
+      - name: Terraform Init
+        working-directory: terraform/s3-deploy
+        run: terraform init
+
+      - name: Terraform Apply (deploy)
+        working-directory: terraform/s3-deploy
+        env:
+          AWS_REGION: ${{ vars.AWS_REGION }}
+          AWS_ACCESS_KEY_ID: ${{ vars.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ vars.AWS_SECRET_ACCESS_KEY }}
+        run: |
+          terraform apply -auto-approve \
+            -var="bucket_name=${{ vars.S3_BUCKET }}" \
+            -var="region=${{ vars.AWS_REGION }}" \
+            -var="cloudfront_distribution_id=${{ vars.CLOUDFRONT_DISTRIBUTION_ID }}" \
+            -var="aws_profile=" \
+            -var="build_dir=${GITHUB_WORKSPACE}/dist"
+
