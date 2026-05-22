@@ -51,9 +51,9 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         run: |
           terraform apply -auto-approve \
-            -var="bucket_name=${{ vars.S3_BUCKET }}" \
-            -var="region=${{ vars.AWS_REGION }}" \
-            -var="cloudfront_distribution_id=${{ vars.CLOUDFRONT_DISTRIBUTION_ID }}" \
+            -var="bucket_name=${{ secrets.S3_BUCKET }}" \
+            -var="region=${{ secrets.AWS_REGION }}" \
+            -var="cloudfront_distribution_id=${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}" \
             -var="aws_profile=" \
             -var="build_dir=${GITHUB_WORKSPACE}/dist"
 
