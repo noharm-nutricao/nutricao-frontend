@@ -205,7 +205,7 @@ describe("mutex: fila vs. severidade", () => {
     return [curFila === key ? "" : key, ""];
   }
 
-  function handleSevClick(curFila: string, curSev: string, sev: string): [string, string] {
+  function handleSevClick(_curFila: string, curSev: string, sev: string): [string, string] {
     return ["", curSev === sev ? "" : sev];
   }
 
