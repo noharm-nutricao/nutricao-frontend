@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Modal,
   Row,
@@ -37,6 +37,7 @@ import {
 import { MnutricManualForm } from "../MnutricManualForm/MnutricManualForm";
 import {
   SEV_CONFIG,
+  INST_STYLE,
   ALA_CONFIG,
   calcMbcd,
   sevMNUTRIC,
@@ -45,13 +46,12 @@ import {
   GLIM_FEN_LABEL,
   GLIM_ETIOL_LABEL,
 } from "../../nutritionalUtils";
-import { InfoBlock, SectionTitle, ScorePanel, ScorePanelTitle, ScorePanelValue, DimsGrid, DimChip, GlimPanel, GlimSectionLabel, ChipsRow, Chip, GlimDiagBadge, GovernanceNote, InstPanel, InstItemRow, InstDot, InstTypeLabel, GlimResultBox, HistEntry } from "./styles";
+import { InfoBlock, SectionTitle, ScorePanel, ScorePanelTitle, ScorePanelValue, DimsGrid, DimChip, GlimPanel, GlimSectionLabel, ChipsRow, Chip, GlimDiagBadge, GovernanceNote, InstPanel, InstItemRow, InstTypeLabel, GlimResultBox, HistEntry, InstSevBadge } from "./styles";
 
-
-const INST_DOT_COLOR: Record<string, string> = {
-  lab: "#e24b4a",
-  clin: "#d4931a",
-  rx: "#7e57c2",
+const INST_SEV_LABEL: Record<string, string> = {
+  cr: "Crítico",
+  al: "Alto",
+  md: "Médio",
 };
 
 const INST_TYPE_LABEL: Record<string, string> = {
@@ -114,6 +114,7 @@ export function PatientModal({
   // ── Inst tab local state ──────────────────────────────────────────────
   const [instObs, setInstObs] = useState("");
   const [antecipar, setAntecipar] = useState<string>("");
+  const ackInProgress = useRef(false);
 
   // ── Initialize from patient ───────────────────────────────────────────
   useEffect(() => {
@@ -227,26 +228,46 @@ export function PatientModal({
   };
 
   const handleAcknowledgeAlert = async (alertId: number) => {
-    dispatch(markAlertAcknowledged({ patientId: p.id, alertId }));
+    if (ackInProgress.current) {
+      console.warn("handleAcknowledgeAlert blocked — already in progress");
+      return;
+    }
+    ackInProgress.current = true;
+    console.trace(">>> handleAcknowledgeAlert CALLED, alertId:", alertId);
     try {
-      await dispatch(acknowledgeAlert({ patientId: p.id, alertId })).unwrap();
-    } catch {
-      dispatch(revertAlert({ patientId: p.id, alertId }));
-      message.error("Erro ao reconhecer alerta.");
+      dispatch(markAlertAcknowledged({ patientId: p.id, alertId }));
+      const action = await dispatch(acknowledgeAlert({ patientId: p.id, alertId }));
+      if (acknowledgeAlert.rejected.match(action)) {
+        console.error("AcknowledgeAlert Error:", action.payload);
+        dispatch(revertAlert({ patientId: p.id, alertId }));
+        message.error("Erro ao reconhecer: " + String(action.payload));
+      }
+    } finally {
+      ackInProgress.current = false;
     }
   };
 
   const handleAcknowledgeAll = async () => {
-    const activeAlerts = p.inst.filter((i) => !i.ack);
-    for (const alert of activeAlerts) {
-      dispatch(markAlertAcknowledged({ patientId: p.id, alertId: alert.id }));
-      try {
-        await dispatch(acknowledgeAlert({ patientId: p.id, alertId: alert.id })).unwrap(); // eslint-disable-line no-await-in-loop
-      } catch {
-        dispatch(revertAlert({ patientId: p.id, alertId: alert.id }));
-        message.error("Erro ao reconhecer alertas.");
-        break;
+    if (ackInProgress.current) {
+      console.warn("handleAcknowledgeAll blocked — already in progress");
+      return;
+    }
+    ackInProgress.current = true;
+    console.trace(">>> handleAcknowledgeAll CALLED");
+    try {
+      const activeAlerts = p.inst.filter((i) => !i.ack);
+      for (const alert of activeAlerts) {
+        dispatch(markAlertAcknowledged({ patientId: p.id, alertId: alert.id }));
+        const action = await dispatch(acknowledgeAlert({ patientId: p.id, alertId: alert.id })); // eslint-disable-line no-await-in-loop
+        if (acknowledgeAlert.rejected.match(action)) {
+          console.error("AcknowledgeAll Error:", action.payload);
+          dispatch(revertAlert({ patientId: p.id, alertId: alert.id }));
+          message.error("Erro geral: " + String(action.payload));
+          break;
+        }
       }
+    } finally {
+      ackInProgress.current = false;
     }
   };
 
@@ -459,7 +480,7 @@ export function PatientModal({
           <InstPanel style={{ marginBottom: 12 }}>
             {p.inst.map((item, i) => (
               <InstItemRow key={i}>
-                <InstDot $color={INST_DOT_COLOR[item.t] ?? "#8c8c8c"} />
+                { (() => { const st = INST_STYLE[item.sev] ?? INST_STYLE.md; return <InstSevBadge $bg={st.bg} $color={st.color} $border={st.border}>{INST_SEV_LABEL[item.sev] ?? "Médio"}</InstSevBadge>; })() }
                 <span>{item.d}</span>
                 <InstTypeLabel>{INST_TYPE_LABEL[item.t] ?? item.t}</InstTypeLabel>
               </InstItemRow>
@@ -835,7 +856,7 @@ export function PatientModal({
           <InstPanel style={{ marginBottom: 16 }}>
             {activeLab.map((item) => (
               <InstItemRow key={item.id}>
-                <InstDot $color={INST_DOT_COLOR.lab} />
+                { (() => { const st = INST_STYLE[item.sev] ?? INST_STYLE.md; return <InstSevBadge $bg={st.bg} $color={st.color} $border={st.border}>{INST_SEV_LABEL[item.sev] ?? "Médio"}</InstSevBadge>; })() }
                 <span style={{ flex: 1 }}>{item.d}</span>
                 <InstTypeLabel>Laboratório</InstTypeLabel>
                 <Button
@@ -857,22 +878,27 @@ export function PatientModal({
         <>
           <SectionTitle>Achados clínicos / prescrição</SectionTitle>
           <InstPanel style={{ marginBottom: 16 }}>
-            {activeClinRx.map((item) => (
-              <InstItemRow key={item.id}>
-                <InstDot $color={INST_DOT_COLOR[item.t] ?? "#8c8c8c"} />
-                <span style={{ flex: 1 }}>{item.d}</span>
-                <InstTypeLabel>{INST_TYPE_LABEL[item.t] ?? item.t}</InstTypeLabel>
-                <Button
-                  size="small"
-                  type="text"
-                  style={{ marginLeft: 8, fontSize: 11, color: "#3a9c6e" }}
-                  loading={alertsLoading}
-                  onClick={() => handleAcknowledgeAlert(item.id)}
-                >
-                  Reconhecer
-                </Button>
-              </InstItemRow>
-            ))}
+            {activeClinRx.map((item) => {
+              const st = INST_STYLE[item.sev] ?? INST_STYLE.md;
+              return (
+                <InstItemRow key={item.id}>
+                  <InstSevBadge $bg={st.bg} $color={st.color} $border={st.border}>
+                    {INST_SEV_LABEL[item.sev] ?? "Médio"}
+                  </InstSevBadge>
+                  <span style={{ flex: 1, marginLeft: 8 }}>{item.d}</span>
+                  <InstTypeLabel>{INST_TYPE_LABEL[item.t] ?? item.t}</InstTypeLabel>
+                  <Button
+                    size="small"
+                    type="text"
+                    style={{ marginLeft: 8, fontSize: 11, color: "#3a9c6e" }}
+                    loading={alertsLoading}
+                    onClick={() => handleAcknowledgeAlert(item.id)}
+                  >
+                    Reconhecer
+                  </Button>
+                </InstItemRow>
+              );
+            })}
           </InstPanel>
         </>
       )}

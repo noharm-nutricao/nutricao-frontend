@@ -255,3 +255,18 @@ export const GlimResultBox = styled.div<{ $diag: string }>`
   font-size: 13px;
   font-weight: 700;
 `;
+
+
+export const InstSevBadge = styled.span<{ $bg: string; $color: string; $border: string }>`
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 9px;
+  font-size: 9px;
+  font-weight: 600;
+  background: ${(p) => p.$bg};
+  color: ${(p) => p.$color};
+  border: 1px solid ${(p) => p.$border};
+  white-space: nowrap;
+  margin-left: 6px;
+  flex-shrink: 0;
+`;

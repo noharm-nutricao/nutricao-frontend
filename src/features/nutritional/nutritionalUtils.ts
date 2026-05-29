@@ -99,6 +99,12 @@ export function sevMNUTRIC(v: number): SeverityType {
   return "bx";
 }
 
+export const INST_STYLE: Record<string, { bg: string; color: string; border: string }> = {
+  cr: { bg: "#fcebeb", color: "#a32d2d", border: "#f09595" },
+  al: { bg: "#fdf3dc", color: "#b7770d", border: "#fac775" },
+  md: { bg: "#f0eeff", color: "#3c3489", border: "#b39ddb" },
+};
+
 export function sevNRS(v: number): SeverityType {
   if (v >= 5) return "cr";
   if (v >= 3) return "al";

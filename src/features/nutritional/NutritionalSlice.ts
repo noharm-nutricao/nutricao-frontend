@@ -6,9 +6,18 @@ export type AlaType = "UTI" | "B" | "C";
 export type SeverityType = "cr" | "al" | "md" | "bx";
 export type GlimDiag = "nd" | "mod" | "grave" | null;
 
+// Mapeamento de severidade do backend (nomes por extenso) → abreviações do frontend
+const SEV_MAP_FROM_BACKEND: Record<string, string> = {
+  vermelho: "cr",
+  laranja: "al",
+  amarelo: "md",
+  verde: "bx",
+};
+
 export interface InstItem {
   id: number;
   t: "lab" | "clin" | "rx";
+  sev: "cr" | "al" | "md";
   d: string;
   ack: boolean;
 }
@@ -96,10 +105,21 @@ function normalizeAla(raw: string | null | undefined): AlaType {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function normalizeApiPatient(raw: any): NutritionalPatient {
+export function normalizeApiAlert(i: any): InstItem {
+  return {
+    id: i.id ?? 0,
+    t: i.t ?? i.tipo ?? "lab",
+    sev: i.sev ?? SEV_MAP_FROM_BACKEND[i.severidade] ?? "md",
+    d: i.d ?? i.descricao ?? "",
+    ack: i.ack ?? i.reconhecido ?? false,
+  };
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function normalizeApiPatient(raw: any): NutritionalPatient {
   const c1 = raw.campo1 ?? {};
   return {
-    id: raw.id,
+    id: raw.id ?? 0,
     leito: raw.leito ?? "—",
     ala: normalizeAla(raw.nome_setor ?? raw.ala),
     nome: raw.nome ?? "",
@@ -125,12 +145,7 @@ function normalizeApiPatient(raw: any): NutritionalPatient {
     glim_diag: raw.glim_diag ?? null,
     glim_fen: (raw.glim_fen ?? []).map((k: string) => FEN_FROM_BACKEND[k] ?? k),
     glim_etiol: (raw.glim_etiol ?? []).map((k: string) => ETIOL_FROM_BACKEND[k] ?? k),
-    inst: (raw.inst ?? []).map((i: any) => ({ // eslint-disable-line @typescript-eslint/no-explicit-any
-      id: i.id ?? 0,
-      t: i.t,
-      d: i.d,
-      ack: i.ack ?? false,
-    })),
+    inst: (raw.inst ?? []).map(normalizeApiAlert),
     conduta: raw.conduta ?? "",
     alergia: raw.alergia ?? null,
     alOk: raw.al_ok ?? raw.alOk ?? true,
@@ -193,7 +208,13 @@ export const fetchAlerts = createAsyncThunk(
       const raw: any[] = Array.isArray(response.data) ? response.data : response.data?.data ?? []; // eslint-disable-line @typescript-eslint/no-explicit-any
       return {
         patientId,
-        alerts: raw.map((i: any) => ({ id: i.id ?? 0, t: i.t, d: i.d, ack: i.ack ?? false })), // eslint-disable-line @typescript-eslint/no-explicit-any
+        alerts: raw.map((i: any) => ({ // eslint-disable-line @typescript-eslint/no-explicit-any
+          id: i.id ?? 0,
+          t: i.t ?? i.tipo ?? "lab",
+          sev: i.sev ?? SEV_MAP_FROM_BACKEND[i.severidade] ?? "md",
+          d: i.d ?? i.descricao ?? "",
+          ack: i.ack ?? i.reconhecido ?? false,
+        })),
       };
     } catch (err) {
       const axiosErr = err as AxiosError<{ error?: string; message?: string }>;
@@ -211,6 +232,10 @@ export const acknowledgeAlert = createAsyncThunk(
       return { patientId, alertId };
     } catch (err) {
       const axiosErr = err as AxiosError<{ error?: string; message?: string }>;
+      // 409 = já reconhecido — tratar como sucesso (idempotência)
+      if (axiosErr.response?.status === 409) {
+        return { patientId, alertId };
+      }
       const msg = axiosErr.response?.data?.error ?? axiosErr.response?.data?.message ?? axiosErr.message ?? "Error acknowledging alert";
       return thunkAPI.rejectWithValue(msg);
     }
@@ -427,7 +452,7 @@ const nutritionalSlice = createSlice({
         const { patientId, alerts } = action.payload;
         state.alertsLoading[patientId] = false;
         const patient = state.patients.find((p) => p.id === patientId);
-        if (patient) patient.inst = alerts;
+        if (patient) patient.inst = alerts.map(normalizeApiAlert);
       })
       .addCase(fetchAlerts.rejected, (state, action) => {
         state.alertsLoading[action.meta.arg] = false;

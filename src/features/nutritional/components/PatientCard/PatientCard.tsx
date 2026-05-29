@@ -24,9 +24,9 @@ interface PatientCardProps {
 }
 
 const INST_STYLE: Record<string, { bg: string; color: string; border: string }> = {
-  lab: { bg: "#fcebeb", color: "#a32d2d", border: "#f09595" },
-  clin: { bg: "#fdf3dc", color: "#b7770d", border: "#fac775" },
-  rx: { bg: "#f0eeff", color: "#3c3489", border: "#b39ddb" },
+  cr: { bg: "#fcebeb", color: "#a32d2d", border: "#f09595" },
+  al: { bg: "#fdf3dc", color: "#b7770d", border: "#fac775" },
+  md: { bg: "#f0eeff", color: "#3c3489", border: "#b39ddb" },
 };
 
 export function PatientCard({
@@ -54,11 +54,22 @@ export function PatientCard({
           ? "#3a9c6e"
           : "#d4931a";
 
-  const instSlice = p.inst.slice(0, 3);
-  const instMore = p.inst.length > 3 ? p.inst.length - 3 : 0;
+  // Determine highest severity from active (non-ack) alerts for card border
+  const SEV_PRIORITY: Record<string, number> = { cr: 3, al: 2, md: 1 };
+  const activeInst = p.inst.filter((i) => !i.ack);
+  const highestInstSev = activeInst.length > 0
+    ? activeInst.reduce((max, item) => {
+        const cur = SEV_PRIORITY[item.sev] ?? 0;
+        const prev = SEV_PRIORITY[max] ?? 0;
+        return cur > prev ? item.sev : max;
+      }, activeInst[0].sev)
+    : null;
+
+  const instSlice = activeInst.slice(0, 3);
+  const instMore = activeInst.length > 3 ? activeInst.length - 3 : 0;
 
   return (
-    <Card $sev={p.sev} $atend={isAtend}>
+    <Card $sev={highestInstSev ?? p.sev} $atend={isAtend}>
       <CardBody onClick={onClick}>
         <CardTop>
           <BedLabel>{p.leito}</BedLabel>
@@ -160,12 +171,12 @@ export function PatientCard({
         </GlimText>
 
         {/* Campo 3 – Instabilidade */}
-        {p.inst.length > 0 && (
+        {activeInst.length > 0 && (
           <>
             <SectionLabel>Campo 3 – Instabilidade</SectionLabel>
             <TagsRow>
               {instSlice.map((item, i) => {
-                const st = INST_STYLE[item.t] ?? INST_STYLE.lab;
+                const st = INST_STYLE[item.sev] ?? INST_STYLE.md;
                 return (
                   <Tooltip key={i} title={item.d}>
                     <Badge $bg={st.bg} $color={st.color} $border={st.border}>
