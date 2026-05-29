@@ -21,6 +21,13 @@ export default defineConfig({
   ],
   server: {
     port: 3000,
+     proxy: {
+      "/api": {
+        target: "https://nf5vrtmgfieecoc3kewsih2yem0wclkd.lambda-url.us-east-2.on.aws",
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, ""),
+      },
+    },
   },
   resolve: {
     alias: {
