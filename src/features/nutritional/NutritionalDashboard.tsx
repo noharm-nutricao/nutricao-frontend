@@ -17,7 +17,7 @@ import {
 } from "@ant-design/icons";
 
 import { useAppDispatch, useAppSelector } from "src/store";
-import { selectFila1, selectFila2, selectFila5 } from "src/store/selectors/nutritionalSelectors";
+import { selectFila1, selectFila2, selectFila3, selectFila4, selectFila5 } from "src/store/selectors/nutritionalSelectors";
 import { FeatureService } from "src/services/FeatureService";
 import Feature from "src/models/Feature";
 import { PageHeader } from "src/styles/PageHeader.style";
@@ -28,7 +28,6 @@ import {
   setFiltFila as setFiltFilaAction,
   NutritionalPatient,
   AlaType,
-  AcknowledgedEntry,
 } from "./NutritionalSlice";
 import { NutritionalFilter } from "./components/NutritionalFIlter/NutritionalFilter";
 import { PatientCard } from "./components/PatientCard/PatientCard";
@@ -44,6 +43,7 @@ import {
   getPatientScore,
   scoreColorMnutric,
   scoreColorNrs,
+  matchFila,
 } from "./nutritionalUtils";
 import { SummaryBar, SummaryItem, SummaryRight, WardSection, WardHeader, WardLeft, WardDot, WardName, WardSub, BedGrid, EmptyBed, ListCard, ListCardBody, ListCell, ListCellLabel, InlineBadge, ListCardFooter } from "./styles";
 
@@ -52,12 +52,14 @@ export function NutritionalDashboard() {
 
   const dispatch = useAppDispatch();
 
-  const filtFila = useAppSelector((state: any) => state.nutritional.filtFila as string);
+  const filtFila = useAppSelector((state) => state.nutritional.filtFila);
   const fila1Patients = useAppSelector(selectFila1);
   const fila2Patients = useAppSelector(selectFila2);
+  const fila3Patients = useAppSelector(selectFila3);
+  const fila4Patients = useAppSelector(selectFila4);
   const fila5Patients = useAppSelector(selectFila5);
   const { patients, acknowledged, loading, error } = useAppSelector(
-    (state: any) => state.nutritional
+    (state) => state.nutritional
   );
 
   const [viewMode, setViewMode] = useState<"grid" | "lista">("grid");
@@ -77,6 +79,7 @@ export function NutritionalDashboard() {
   }, [dispatch]);
 
   // ── Filtered + sorted list ──────────────────────────────────────────────
+  // matchFila is a pure module-level function — no closure, not a dep.
   const filtered = useMemo(() => {
     let list: NutritionalPatient[] = [...patients];
     if (filtAla !== "all" && filtAla !== "") {
@@ -86,14 +89,14 @@ export function NutritionalDashboard() {
       list = list.filter((p) => p.sev === filtSev);
     }
     if (filtFila) {
-      list = list.filter((p) => matchFila(p, filtFila, acknowledged));
+      list = list.filter((p) => matchFila(p, filtFila));
     }
     return list.sort((a, b) =>
       sortAsc
         ? getPatientScore(a) - getPatientScore(b)
         : getPatientScore(b) - getPatientScore(a)
     );
-  }, [patients, filtAla, filtSev, filtFila, sortAsc, acknowledged]);
+  }, [patients, filtAla, filtSev, filtFila, sortAsc]);
 
   // ── Summary counts ──────────────────────────────────────────────────────
   const summary = useMemo(
@@ -109,18 +112,6 @@ export function NutritionalDashboard() {
     }),
     [patients, acknowledged]
   );
-
-  function matchFila(
-    p: NutritionalPatient,
-    filtFila: string,
-    _acknowledged: Record<number, AcknowledgedEntry>
-  ): boolean {
-    if (!filtFila || filtFila === "all") return true;
-    if (filtFila === "FILA1") return (p.sev === "cr" || p.sev === "al") && p.haval > 18;
-    if (filtFila === "FILA2") return p.haval >= 12 && p.haval <= 24;
-    if (filtFila === "FILA5") return p.d7 === true;
-    return true;
-  };
 
   const handleAcknowledge = (id: number) => {
     dispatch(
@@ -197,6 +188,8 @@ export function NutritionalDashboard() {
         countsFila={{
           FILA1: fila1Patients.length,
           FILA2: fila2Patients.length,
+          FILA3: fila3Patients.length,
+          FILA4: fila4Patients.length,
           FILA5: fila5Patients.length,
         }}
         sortAsc={sortAsc}
