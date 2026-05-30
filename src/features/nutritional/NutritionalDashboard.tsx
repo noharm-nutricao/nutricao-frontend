@@ -13,6 +13,7 @@ import {
   UnorderedListOutlined,
   CheckCircleOutlined,
   ClockCircleOutlined,
+  CalculatorOutlined,
 } from "@ant-design/icons";
 
 import { useAppDispatch, useAppSelector } from "src/store";
@@ -32,6 +33,7 @@ import {
 import { NutritionalFilter } from "./components/NutritionalFIlter/NutritionalFilter";
 import { PatientCard } from "./components/PatientCard/PatientCard";
 import { PatientModal } from "./components/PatientModal/PatientModal";
+import { ChumleaCalculator } from "./components/ChumleaCalculator/ChumleaCalculator";
 import {
   REFRESH_INTERVAL,
   SEV_CONFIG,
@@ -64,6 +66,7 @@ export function NutritionalDashboard() {
   const [sortAsc, setSortAsc] = useState(false);
   const [modalTab, setModalTab] = useState("vis");
   const [modalPatient, setModalPatient] = useState<NutritionalPatient | null>(null);
+  const [showChumlea, setShowChumlea] = useState(false);
 
 
   // ── Auto-fetch + 15-min refresh ─────────────────────────────────────────
@@ -161,6 +164,12 @@ export function NutritionalDashboard() {
           </span>
         </div>
         <div className="page-header-actions">
+          <Button
+            icon={<CalculatorOutlined />}
+            onClick={() => setShowChumlea(true)}
+          >
+            Chumlea
+          </Button>
           <Segmented
             value={viewMode}
             onChange={(v) => setViewMode(v as "grid" | "lista")}
@@ -578,6 +587,12 @@ export function NutritionalDashboard() {
           )}
         </div>
       )}
+
+      {/* Chumlea calculator modal */}
+      <ChumleaCalculator
+        open={showChumlea}
+        onClose={() => setShowChumlea(false)}
+      />
 
       {/* Patient detail modal */}
       <PatientModal
