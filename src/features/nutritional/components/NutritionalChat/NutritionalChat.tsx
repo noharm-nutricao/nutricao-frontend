@@ -35,7 +35,11 @@ import {
   ContextBadge,
   ImagePreviewBar,
   ImagePreviewThumb,
+  ResizeHandle,
 } from "./styles";
+
+const MIN_W = 300; const MAX_W = 680;
+const MIN_H = 380; const MAX_H = 760;
 
 interface NutritionalChatProps {
   contextPatient?: NutritionalPatient | null;
@@ -81,9 +85,33 @@ export function NutritionalChat({ contextPatient }: NutritionalChatProps) {
   const [text, setText] = useState("");
   const [image, setImage] = useState<{ base64: string; format: string; preview: string } | null>(null);
   const [useContext, setUseContext] = useState(true);
+  const [dims, setDims] = useState({ w: 380, h: 520 });
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef   = useRef<HTMLInputElement>(null);
+
+  const startResize = (e: React.MouseEvent, mode: "w" | "wh") => {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const startW = dims.w;
+    const startH = dims.h;
+
+    const onMove = (ev: MouseEvent) => {
+      const dw = startX - ev.clientX;
+      const dh = startY - ev.clientY;
+      setDims({
+        w: Math.min(MAX_W, Math.max(MIN_W, startW + dw)),
+        h: mode === "wh" ? Math.min(MAX_H, Math.max(MIN_H, startH + dh)) : dims.h,
+      });
+    };
+    const onUp = () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+  };
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -164,7 +192,9 @@ export function NutritionalChat({ contextPatient }: NutritionalChatProps) {
 
   return (
     <>
-      <ChatWindow>
+      <ChatWindow $w={dims.w} $h={dims.h}>
+        <ResizeHandle $corner onMouseDown={(e) => startResize(e, "wh")} />
+        <ResizeHandle onMouseDown={(e) => startResize(e, "w")} />
         <ChatHeader>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <RobotOutlined style={{ fontSize: 16 }} />

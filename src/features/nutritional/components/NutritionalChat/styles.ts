@@ -21,12 +21,12 @@ export const ChatFab = styled.button`
   &:hover { background: #6d46b8; }
 `;
 
-export const ChatWindow = styled.div`
+export const ChatWindow = styled.div<{ $w: number; $h: number }>`
   position: fixed;
   bottom: 88px;
   right: 24px;
-  width: 380px;
-  height: 520px;
+  width: ${({ $w }) => $w}px;
+  height: ${({ $h }) => $h}px;
   background: #fff;
   border-radius: 12px;
   box-shadow: 0 8px 32px rgba(0,0,0,0.18);
@@ -34,6 +34,26 @@ export const ChatWindow = styled.div`
   flex-direction: column;
   z-index: 1100;
   overflow: hidden;
+  user-select: none;
+`;
+
+export const ResizeHandle = styled.div<{ $corner?: boolean }>`
+  position: absolute;
+  z-index: 10;
+  ${({ $corner }) => $corner ? `
+    left: 0; top: 0;
+    width: 18px; height: 18px;
+    cursor: nw-resize;
+    border-radius: 12px 0 0 0;
+  ` : `
+    left: 0; top: 18px;
+    width: 6px; bottom: 0;
+    cursor: ew-resize;
+  `}
+  background: transparent;
+  &:hover {
+    background: rgba(126, 87, 194, 0.15);
+  }
 `;
 
 export const ChatHeader = styled.div`
