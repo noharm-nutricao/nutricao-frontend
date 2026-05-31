@@ -195,7 +195,7 @@ export const fetchAlerts = createAsyncThunk(
       const raw: any[] = Array.isArray(response.data) ? response.data : response.data?.data ?? []; // eslint-disable-line @typescript-eslint/no-explicit-any
       return {
         patientId,
-        alerts: raw.map((i: any) => ({ id: i.id ?? 0, t: i.t, d: i.d, ack: i.ack ?? false })), // eslint-disable-line @typescript-eslint/no-explicit-any
+        alerts: raw.map((i: any) => ({ id: i.id ?? 0, t: i.t, d: i.d, ack: i.ack ?? false, sev: (i.sev ?? "md") as SeverityType })), // eslint-disable-line @typescript-eslint/no-explicit-any
       };
     } catch (err) {
       const axiosErr = err as AxiosError<{ error?: string; message?: string }>;
