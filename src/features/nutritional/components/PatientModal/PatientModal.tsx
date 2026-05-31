@@ -787,6 +787,13 @@ export function PatientModal({
           ))}
         </>
       )}
+
+      {p.freq_horas != null && (
+        <InfoBlock style={{ marginTop: 8 }}>
+          <div className="info-label">Frequência acordada</div>
+          <div className="info-value">Visita: {p.freq_horas}h</div>
+        </InfoBlock>
+      )}
     </div>
   );
 

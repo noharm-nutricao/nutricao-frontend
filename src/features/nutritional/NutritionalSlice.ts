@@ -44,6 +44,7 @@ export interface NutritionalPatient {
   sofa?: number;
   dieta: string;
   npo: number;
+  freq_horas: number | null;
   peso: string;
   imc: number | null;
   haval: number;
@@ -118,6 +119,7 @@ function normalizeApiPatient(raw: any): NutritionalPatient {
     // Clínico
     dieta: raw.dieta ?? "",
     npo: raw.npo ?? 0,
+    freq_horas: raw.freq_horas ?? null,
     peso: raw.peso != null ? `${raw.peso} kg` : "",
     imc: raw.imc ?? null,
     // Acompanhamento

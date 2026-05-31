@@ -16,7 +16,7 @@ import {
 } from "@ant-design/icons";
 
 import { useAppDispatch, useAppSelector } from "src/store";
-import { selectFila1, selectFila2, selectFila5 } from "src/store/selectors/nutritionalSelectors";
+import { isFila2Eligible, selectFila1, selectFila2, selectFila5 } from "src/store/selectors/nutritionalSelectors";
 import { FeatureService } from "src/services/FeatureService";
 import Feature from "src/models/Feature";
 import { PageHeader } from "src/styles/PageHeader.style";
@@ -114,7 +114,7 @@ export function NutritionalDashboard() {
   ): boolean {
     if (!filtFila || filtFila === "all") return true;
     if (filtFila === "FILA1") return (p.sev === "cr" || p.sev === "al") && p.haval > 18;
-    if (filtFila === "FILA2") return p.haval >= 12 && p.haval <= 24;
+    if (filtFila === "FILA2") return isFila2Eligible(p);
     if (filtFila === "FILA5") return p.d7 === true;
     return true;
   };
@@ -413,6 +413,17 @@ export function NutritionalDashboard() {
                             <div style={{ fontSize: 11, color: "#8c8c8c" }}>
                               {FeatureService.has(Feature.HIDE_NAMES) ? "**a" : `${p.idade}a`} · {p.dias}d · #{p.pri} fila
                             </div>
+                            {p.freq_horas != null && (
+                              <div style={{ marginTop: 6 }}>
+                                <InlineBadge
+                                  $bg="#e6f4ff"
+                                  $color="#1677ff"
+                                  $border="#91caff"
+                                >
+                                  Visita: {p.freq_horas}h
+                                </InlineBadge>
+                              </div>
+                            )}
                             {(p.dados_incompletos || p.nrs_completo === false) && (
                               <div style={{ marginTop: 6, display: "flex", flexDirection: "column", gap: 4, alignItems: "flex-start" }}>
                                 {p.dados_incompletos && (

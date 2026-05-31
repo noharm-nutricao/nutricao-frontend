@@ -110,6 +110,14 @@ export function PatientCard({
           )}
         </PatientMeta>
 
+        {p.freq_horas != null && (
+          <div style={{ marginBottom: 6 }}>
+            <Badge $bg="#e6f4ff" $color="#1677ff" $border="#91caff">
+              Visita: {p.freq_horas}h
+            </Badge>
+          </div>
+        )}
+
         {/* Campo 1 – Risco nutricional */}
         <SectionLabel>Campo 1 – Risco</SectionLabel>
         {isUTI && p.mnutric != null ? (

@@ -1,5 +1,7 @@
 import { test, expect } from "@playwright/test";
 
+import { isFila2Eligible } from "../../src/store/selectors/nutritionalSelectors.ts";
+
 const API_URL =  process.env.VITE_APP_API_URL || "http://localhost:5000";
 const API_KEY =  "test-key";
 
@@ -491,5 +493,23 @@ test.describe("Nutritional API", () => {
 
     //   expect(responseContext).toBeDefined();
     // });
+  });
+
+  test.describe("Fila 2 rule", () => {
+    test("includes when haval reaches 80% of the agreed frequency", () => {
+      expect(isFila2Eligible({ freq_horas: 48, haval: 40 })).toBe(true);
+    });
+
+    test("excludes when haval is below 80% of the agreed frequency", () => {
+      expect(isFila2Eligible({ freq_horas: 48, haval: 30 })).toBe(false);
+    });
+
+    test("includes fallback when freq_horas is null and haval is between 12 and 24", () => {
+      expect(isFila2Eligible({ freq_horas: null, haval: 15 })).toBe(true);
+    });
+
+    test("excludes fallback when freq_horas is null and haval is outside the window", () => {
+      expect(isFila2Eligible({ freq_horas: null, haval: 30 })).toBe(false);
+    });
   });
 });
