@@ -49,9 +49,10 @@ import { InfoBlock, SectionTitle, ScorePanel, ScorePanelTitle, ScorePanelValue, 
 
 
 const INST_DOT_COLOR: Record<string, string> = {
-  lab: "#e24b4a",
-  clin: "#d4931a",
-  rx: "#7e57c2",
+  cr: "#a32d2d",
+  al: "#b7770d",
+  md: "#3c3489",
+  bx: "#8c8c8c",
 };
 
 const INST_TYPE_LABEL: Record<string, string> = {
@@ -459,7 +460,7 @@ export function PatientModal({
           <InstPanel style={{ marginBottom: 12 }}>
             {p.inst.map((item, i) => (
               <InstItemRow key={i}>
-                <InstDot $color={INST_DOT_COLOR[item.t] ?? "#8c8c8c"} />
+                <InstDot $color={INST_DOT_COLOR[item.sev] ?? "#8c8c8c"} />
                 <span>{item.d}</span>
                 <InstTypeLabel>{INST_TYPE_LABEL[item.t] ?? item.t}</InstTypeLabel>
               </InstItemRow>
@@ -835,7 +836,7 @@ export function PatientModal({
           <InstPanel style={{ marginBottom: 16 }}>
             {activeLab.map((item) => (
               <InstItemRow key={item.id}>
-                <InstDot $color={INST_DOT_COLOR.lab} />
+                <InstDot $color={INST_DOT_COLOR[item.sev] ?? "#8c8c8c"} />
                 <span style={{ flex: 1 }}>{item.d}</span>
                 <InstTypeLabel>Laboratório</InstTypeLabel>
                 <Button
@@ -859,7 +860,7 @@ export function PatientModal({
           <InstPanel style={{ marginBottom: 16 }}>
             {activeClinRx.map((item) => (
               <InstItemRow key={item.id}>
-                <InstDot $color={INST_DOT_COLOR[item.t] ?? "#8c8c8c"} />
+                <InstDot $color={INST_DOT_COLOR[item.sev] ?? "#8c8c8c"} />
                 <span style={{ flex: 1 }}>{item.d}</span>
                 <InstTypeLabel>{INST_TYPE_LABEL[item.t] ?? item.t}</InstTypeLabel>
                 <Button

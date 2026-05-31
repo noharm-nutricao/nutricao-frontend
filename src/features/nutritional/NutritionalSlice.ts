@@ -11,7 +11,7 @@ export interface InstItem {
   t: "lab" | "clin" | "rx";
   d: string;
   ack: boolean;
-  sev?: SeverityType;
+  sev: SeverityType;
 }
 
 export interface HistEntry {
@@ -131,7 +131,7 @@ function normalizeApiPatient(raw: any): NutritionalPatient {
       t: i.t,
       d: i.d,
       ack: i.ack ?? false,
-      sev: i.sev ?? undefined,
+      sev: (i.sev ?? "md") as SeverityType,
     })),
     conduta: raw.conduta ?? "",
     alergia: raw.alergia ?? null,
