@@ -66,6 +66,13 @@ export interface AcknowledgedEntry {
   prof: string;
 }
 
+export interface LlmSummaryEntry {
+  summary: string;
+  generated_at: string;
+  loading: boolean;
+  error: string | null;
+}
+
 interface NutritionalState {
   patients: NutritionalPatient[];
   acknowledged: Record<number, AcknowledgedEntry>;
@@ -73,6 +80,7 @@ interface NutritionalState {
   error: string | null;
   filtFila: string;
   alertsLoading: Record<number, boolean>;
+  llmSummaries: Record<number, LlmSummaryEntry>;
 }
 
 
@@ -83,6 +91,7 @@ const initialState: NutritionalState = {
   error: null,
   filtFila: "",
   alertsLoading: {},
+  llmSummaries: {},
 };
 
 const ALA_MAP: Record<string, AlaType> = {
@@ -215,6 +224,20 @@ export const acknowledgeAlert = createAsyncThunk(
       const axiosErr = err as AxiosError<{ error?: string; message?: string }>;
       const msg = axiosErr.response?.data?.error ?? axiosErr.response?.data?.message ?? axiosErr.message ?? "Error acknowledging alert";
       return thunkAPI.rejectWithValue(msg);
+    }
+  }
+);
+
+export const fetchLlmSummary = createAsyncThunk(
+  "nutritional/fetchLlmSummary",
+  async (nratendimento: number, { rejectWithValue }) => {
+    try {
+      const res = await api.nutritional.getLlmSummary(nratendimento);
+      return { nratendimento, summary: res.data.summary as string, generated_at: res.data.generated_at as string };
+    } catch (err) {
+      const axiosErr = err as AxiosError<{ error?: string; message?: string }>;
+      const msg = axiosErr.response?.data?.message ?? axiosErr.response?.data?.error ?? axiosErr.message ?? "Erro ao gerar resumo.";
+      return rejectWithValue(msg);
     }
   }
 );
@@ -401,6 +424,9 @@ const nutritionalSlice = createSlice({
         patient.inst = patient.inst.filter((i) => !i.d.includes("Alergia"));
       }
     },
+    clearLlmSummary(state, action: { payload: number }) {
+      delete state.llmSummaries[action.payload];
+    },
     setFiltFila(state, action: { payload: string }) {
       state.filtFila = action.payload;
     },
@@ -454,6 +480,16 @@ const nutritionalSlice = createSlice({
           patient.glim_diag = glim_diag;
         }
       })
+      .addCase(fetchLlmSummary.pending, (state, action) => {
+        state.llmSummaries[action.meta.arg] = { summary: "", generated_at: "", loading: true, error: null };
+      })
+      .addCase(fetchLlmSummary.fulfilled, (state, action) => {
+        const { nratendimento, summary, generated_at } = action.payload;
+        state.llmSummaries[nratendimento] = { summary, generated_at, loading: false, error: null };
+      })
+      .addCase(fetchLlmSummary.rejected, (state, action) => {
+        state.llmSummaries[action.meta.arg] = { summary: "", generated_at: "", loading: false, error: action.payload as string };
+      })
       .addCase(saveAvalToServer.fulfilled, (state, action) => {
         const { id, conduta, freq, ing } = action.payload;
         const patient = state.patients.find((p) => p.id === id);
@@ -479,6 +515,7 @@ export const {
   acknowledgePatient,
   markAlertAcknowledged,
   revertAlert,
+  clearLlmSummary,
   setFiltFila,
   reset,
 } = nutritionalSlice.actions;

@@ -14,6 +14,7 @@ import {
   Radio,
   Button,
   Tooltip,
+  Spin,
   message,
 } from "antd";
 import { WarningOutlined, CheckCircleOutlined, ClockCircleOutlined } from "@ant-design/icons";
@@ -33,6 +34,8 @@ import {
   acknowledgeAlert,
   saveGlimToServer,
   saveAvalToServer,
+  fetchLlmSummary,
+  clearLlmSummary,
 } from "../../NutritionalSlice";
 import { MnutricManualForm } from "../MnutricManualForm/MnutricManualForm";
 import {
@@ -93,6 +96,9 @@ export function PatientModal({
   const dispatch = useAppDispatch();
   const alertsLoading = useAppSelector(
     (state: any) => (state.nutritional.alertsLoading as Record<number, boolean>)[p?.id ?? -1] ?? false // eslint-disable-line @typescript-eslint/no-explicit-any
+  );
+  const llmEntry = useAppSelector(
+    (state: any) => state.nutritional.llmSummaries[p?.id ?? -1] ?? null // eslint-disable-line @typescript-eslint/no-explicit-any
   );
 
   // ── NRS tab local state ───────────────────────────────────────────────
@@ -517,6 +523,66 @@ export function PatientModal({
         >
           Registrar avaliação
         </Button>
+      </div>
+
+      {/* ── Resumo Clínico IA ── */}
+      <Divider style={{ margin: "16px 0 12px" }} />
+      <div style={{ fontSize: 12, fontWeight: 600, color: "#595959", marginBottom: 8 }}>
+        Resumo Clínico IA
+      </div>
+
+      {!llmEntry && (
+        <Button
+          size="small"
+          onClick={() => dispatch(fetchLlmSummary(p.id))}
+        >
+          Gerar resumo
+        </Button>
+      )}
+
+      {llmEntry?.loading && (
+        <div style={{ display: "flex", alignItems: "center", gap: 8, color: "#8c8c8c", fontSize: 12 }}>
+          <Spin size="small" />
+          Gerando resumo...
+        </div>
+      )}
+
+      {llmEntry && !llmEntry.loading && llmEntry.error && (
+        <Alert
+          type="error"
+          showIcon
+          message={llmEntry.error}
+          style={{ marginBottom: 8 }}
+        />
+      )}
+
+      {llmEntry && !llmEntry.loading && llmEntry.summary && (
+        <>
+          <div style={{
+            background: "#fafafa", border: "1px solid #e8e8e8", borderRadius: 4,
+            padding: "10px 12px", fontSize: 13, lineHeight: 1.6, marginBottom: 8,
+          }}>
+            {llmEntry.summary}
+          </div>
+          <div style={{ fontSize: 11, color: "#8c8c8c", marginBottom: 8 }}>
+            Gerado em {llmEntry.generated_at
+              ? new Date(llmEntry.generated_at).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })
+              : "—"} · suporte à decisão
+          </div>
+          <Button
+            size="small"
+            onClick={() => {
+              dispatch(clearLlmSummary(p.id));
+              dispatch(fetchLlmSummary(p.id));
+            }}
+          >
+            Regenerar
+          </Button>
+        </>
+      )}
+
+      <div style={{ fontSize: 11, color: "#8c8c8c", marginTop: 10, fontStyle: "italic" }}>
+        Gerado por IA — suporte à decisão clínica, não substitui avaliação profissional.
       </div>
     </div>
   );
