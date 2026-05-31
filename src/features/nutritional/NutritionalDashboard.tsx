@@ -67,7 +67,10 @@ export function NutritionalDashboard() {
   const [filtSev, setFiltSev] = useState("");
   const [sortAsc, setSortAsc] = useState(false);
   const [modalTab, setModalTab] = useState("vis");
-  const [modalPatient, setModalPatient] = useState<NutritionalPatient | null>(null);
+  const [modalPatientId, setModalPatientId] = useState<number | null>(null);
+  const modalPatient = modalPatientId !== null
+    ? (patients.find((p: NutritionalPatient) => p.id === modalPatientId) ?? null)
+    : null;
   const [showChumlea, setShowChumlea] = useState(false);
 
 
@@ -127,7 +130,7 @@ export function NutritionalDashboard() {
   };
 
   const handleOpenTab = (patient: NutritionalPatient, tab: string) => {
-    setModalPatient(patient);
+    setModalPatientId(patient.id);
     setModalTab(tab);
   };
 
@@ -336,12 +339,11 @@ export function NutritionalDashboard() {
                     const isAtend = !!acknowledged[p.id];
                     const sevCfg = p.sev ? SEV_CONFIG[p.sev] : SEV_CONFIG["bx"];
                     const isUTI = p.ala === "UTI";
-                    const havalColor =
-                      p.haval > 48
-                        ? "#c41e3a"
-                        : p.haval > 24
-                          ? "#d4931a"
-                          : "#3a9c6e";
+                    const havalNever = p.haval >= 999;
+                    const havalColor = havalNever ? "#c41e3a"
+                      : p.haval > 48 ? "#c41e3a"
+                      : p.haval > 24 ? "#d4931a"
+                      : "#3a9c6e";
 
                     const instTags = p.inst.slice(0, 3);
                     const instMore = p.inst.length > 3 ? p.inst.length - 3 : 0;
@@ -552,7 +554,7 @@ export function NutritionalDashboard() {
                           </span>
                           <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
                             <ClockCircleOutlined style={{ color: havalColor }} />
-                            <span style={{ color: havalColor }}>{p.haval}h s/ avaliação</span>
+                            <span style={{ color: havalColor }}>{havalNever ? "Sem avaliação" : `${p.haval}h s/ aval.`}</span>
                           </span>
                           {p.alergia && (
                             <InlineBadge
@@ -593,7 +595,7 @@ export function NutritionalDashboard() {
         acknowledged={acknowledged}
         activeTab={modalTab}
         onTabChange={setModalTab}
-        onClose={() => setModalPatient(null)}
+        onClose={() => setModalPatientId(null)}
       />
     </>
   );

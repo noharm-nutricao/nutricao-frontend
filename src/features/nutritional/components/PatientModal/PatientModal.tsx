@@ -150,8 +150,9 @@ export function PatientModal({
   const mnSev = p.mnutric != null ? sevMNUTRIC(p.mnutric) : null;
   const nrsSev = sevNRS(p.nrs);
 
-  const havalColor =
-    p.haval > 48 ? "#c41e3a" : p.haval > 24 ? "#d4931a" : "#3a9c6e";
+  const havalNever = p.haval >= 999;
+  const havalColor = havalNever ? "#c41e3a"
+    : p.haval > 48 ? "#c41e3a" : p.haval > 24 ? "#d4931a" : "#3a9c6e";
 
   // NRS real-time score
   const nrsPreview = nrsA + p.nrs_dims.doenca + (p.idade >= 70 ? 1 : 0);
@@ -488,7 +489,7 @@ export function PatientModal({
           <InfoBlock>
             <div className="info-label">Última avaliação</div>
             <div className="info-value" style={{ color: havalColor }}>
-              <ClockCircleOutlined /> {p.haval}h atrás
+              <ClockCircleOutlined /> {havalNever ? "Sem avaliação registrada" : `${p.haval}h atrás`}
             </div>
           </InfoBlock>
         </Col>
