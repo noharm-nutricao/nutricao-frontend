@@ -27,6 +27,16 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, ""),
       },
+      "/llm-api": {
+        target: "http://ec2-18-227-26-212.us-east-2.compute.amazonaws.com:8080",
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/llm-api/, ""),
+      },
+      "/llm-token": {
+        target: "https://us-east-2592kdp0dv.auth.us-east-2.amazoncognito.com",
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/llm-token/, ""),
+      },
     },
   },
   resolve: {
