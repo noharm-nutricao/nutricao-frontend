@@ -198,12 +198,33 @@ export function NutritionalChat({ contextPatient }: NutritionalChatProps) {
 
         <ChatMessages>
           {messages.length === 0 && (
-            <div style={{ textAlign: "center", color: "#bfbfbf", fontSize: 12, marginTop: 40 }}>
+            <div style={{ textAlign: "center", color: "#bfbfbf", fontSize: 12, marginTop: 24 }}>
               <RobotOutlined style={{ fontSize: 28, marginBottom: 8 }} />
               <div>Olá! Como posso ajudar?</div>
               {contextPatient && useContext && (
-                <div style={{ marginTop: 6, color: "#7e57c2" }}>
-                  Contexto: {contextPatient.leito || "paciente aberto"} será incluído na 1ª mensagem
+                <div style={{ marginTop: 6, color: "#7e57c2", marginBottom: 16 }}>
+                  Contexto: {contextPatient.leito || "paciente aberto"} ativo
+                </div>
+              )}
+              {contextPatient && useContext && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 6, alignItems: "center", marginTop: 8 }}>
+                  {[
+                    { label: "📋 Resumo clínico", prompt: "Gere um resumo clínico detalhado deste paciente incluindo estado nutricional, riscos identificados e próximos passos recomendados." },
+                    { label: "🍽️ Sugestão de conduta", prompt: "Com base nos dados clínicos deste paciente, quais condutas nutricionais você recomenda? Considere o diagnóstico GLIM, os scores de risco e os alertas ativos." },
+                    { label: "⚠️ Análise de riscos", prompt: "Quais são os principais riscos nutricionais identificados para este paciente? Existe risco de síndrome de realimentação ou outras complicações?" },
+                  ].map(({ label, prompt }) => (
+                    <button
+                      key={label}
+                      onClick={() => { setText(prompt); }}
+                      style={{
+                        background: "#f0eeff", color: "#7e57c2", border: "1px solid #d3adf7",
+                        borderRadius: 16, padding: "4px 14px", fontSize: 12, cursor: "pointer",
+                        fontWeight: 500, transition: "background 0.15s",
+                      }}
+                    >
+                      {label}
+                    </button>
+                  ))}
                 </div>
               )}
             </div>
