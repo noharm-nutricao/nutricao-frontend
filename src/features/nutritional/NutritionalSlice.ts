@@ -228,16 +228,85 @@ export const acknowledgeAlert = createAsyncThunk(
   }
 );
 
+// ── LLM token cache (session-scoped, not persisted) ──────────────────────────
+let _llmTokenCache: { token: string; expiresAt: number } | null = null;
+
+async function getLlmToken(): Promise<string> {
+  if (_llmTokenCache && Date.now() < _llmTokenCache.expiresAt - 60_000) {
+    return _llmTokenCache.token;
+  }
+  const params = new URLSearchParams({
+    grant_type: "client_credentials",
+    client_id:     import.meta.env.VITE_APP_LLM_CLIENT_ID,
+    client_secret: import.meta.env.VITE_APP_LLM_CLIENT_SECRET,
+    scope:         import.meta.env.VITE_APP_LLM_SCOPE,
+  });
+  const resp = await fetch(import.meta.env.VITE_APP_LLM_TOKEN_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: params,
+  });
+  if (!resp.ok) throw new Error("Falha ao obter token LLM.");
+  const { access_token, expires_in } = await resp.json();
+  _llmTokenCache = { token: access_token, expiresAt: Date.now() + expires_in * 1000 };
+  return access_token;
+}
+
+function buildLlmPrompt(p: NutritionalPatient): string {
+  const glimLabel: Record<string, string> = {
+    nd: "sem desnutrição pelo GLIM",
+    mod: "desnutrição moderada (GLIM)",
+    grave: "desnutrição grave (GLIM)",
+  };
+  const instLines = p.inst.length > 0
+    ? p.inst.map((i) => `  - ${i.d} (${i.t}, sev=${i.sev})`).join("\n")
+    : "  - sem alertas ativos";
+  const havalStr = p.haval >= 999 ? "sem avaliação registrada" : `${p.haval}h atrás`;
+  const histLine = p.hist.length > 0
+    ? `última conduta: "${p.hist[0].c}" (${p.hist[0].h})`
+    : "sem conduta registrada";
+
+  return `Você é um assistente de suporte clínico para nutricionistas hospitalares.
+Gere um resumo clínico objetivo (máx. 4 frases) para o seguinte paciente:
+
+- Idade: ${p.idade} anos | Ala: ${p.ala} | Internação: ${p.dias} dias
+- Campo 1 — Risco: ${p.ala === "UTI" ? `mNUTRIC ${p.mnutric ?? "—"}/10` : ""} NRS-2002: ${p.nrs} | Classificação: ${p.sev ?? "sem classificação"}
+- Campo 2 — GLIM: ${p.glim_diag ? glimLabel[p.glim_diag] : "diagnóstico pendente"} | Fenotípicos: ${p.glim_fen.join(", ") || "nenhum"} | Etiológicos: ${p.glim_etiol.join(", ") || "nenhum"}
+- Campo 3 — Instabilidade:
+${instLines}
+- Última avaliação: ${havalStr}
+- ${histLine}
+
+Responda em português, de forma concisa, focando em achados relevantes e próximos passos clínicos.`;
+}
+
 export const fetchLlmSummary = createAsyncThunk(
   "nutritional/fetchLlmSummary",
-  async (nratendimento: number, { rejectWithValue }) => {
+  async (nratendimento: number, { rejectWithValue, getState }) => {
     try {
-      const res = await api.nutritional.getLlmSummary(nratendimento);
-      return { nratendimento, summary: res.data.summary as string, generated_at: res.data.generated_at as string };
+      const state = getState() as { nutritional: { patients: NutritionalPatient[] } };
+      const patient = state.nutritional.patients.find((p) => p.id === nratendimento);
+      if (!patient) return rejectWithValue("Paciente não encontrado no estado.");
+
+      const token = await getLlmToken();
+      const prompt = buildLlmPrompt(patient);
+
+      const resp = await fetch(
+        `${import.meta.env.VITE_APP_LLM_BASE_URL}/llm/chat?model=${import.meta.env.VITE_APP_LLM_MODEL}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ message: prompt }),
+        }
+      );
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}));
+        return rejectWithValue(err?.message ?? `Erro ${resp.status} ao gerar resumo.`);
+      }
+      const { response } = await resp.json();
+      return { nratendimento, summary: response as string, generated_at: new Date().toISOString() };
     } catch (err) {
-      const axiosErr = err as AxiosError<{ error?: string; message?: string }>;
-      const msg = axiosErr.response?.data?.message ?? axiosErr.response?.data?.error ?? axiosErr.message ?? "Erro ao gerar resumo.";
-      return rejectWithValue(msg);
+      return rejectWithValue(err instanceof Error ? err.message : "Erro ao gerar resumo.");
     }
   }
 );
