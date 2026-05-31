@@ -73,6 +73,15 @@ export interface LlmSummaryEntry {
   error: string | null;
 }
 
+export interface ChatMessage {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  imagePreview?: string;
+  timestamp: string;
+  error?: boolean;
+}
+
 interface NutritionalState {
   patients: NutritionalPatient[];
   acknowledged: Record<number, AcknowledgedEntry>;
@@ -81,6 +90,9 @@ interface NutritionalState {
   filtFila: string;
   alertsLoading: Record<number, boolean>;
   llmSummaries: Record<number, LlmSummaryEntry>;
+  chatOpen: boolean;
+  chatMessages: ChatMessage[];
+  chatLoading: boolean;
 }
 
 
@@ -92,6 +104,9 @@ const initialState: NutritionalState = {
   filtFila: "",
   alertsLoading: {},
   llmSummaries: {},
+  chatOpen: false,
+  chatMessages: [],
+  chatLoading: false,
 };
 
 const ALA_MAP: Record<string, AlaType> = {
@@ -311,6 +326,55 @@ export const fetchLlmSummary = createAsyncThunk(
   }
 );
 
+export const sendChatMessage = createAsyncThunk(
+  "nutritional/sendChatMessage",
+  async (
+    payload: { message: string; imageBase64?: string; imageFormat?: string; history: ChatMessage[] },
+    { rejectWithValue }
+  ) => {
+    try {
+      const token = await getLlmToken();
+      const { message, imageBase64, imageFormat, history } = payload;
+
+      // Build conversation context from history (last 10 turns)
+      const recent = history.slice(-10);
+      const contextStr = recent.length > 0
+        ? recent.map((m) => `${m.role === "user" ? "Usuário" : "Assistente"}: ${m.content}`).join("\n") + "\n\nUsuário: " + message
+        : message;
+
+      let resp: Response;
+      if (imageBase64 && imageFormat) {
+        resp = await fetch(
+          `${import.meta.env.VITE_APP_LLM_BASE_URL}/llm/chat/image?model=${import.meta.env.VITE_APP_LLM_MODEL}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ message: contextStr, imageBase64, imageFormat }),
+          }
+        );
+      } else {
+        resp = await fetch(
+          `${import.meta.env.VITE_APP_LLM_BASE_URL}/llm/chat?model=${import.meta.env.VITE_APP_LLM_MODEL}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ message: contextStr }),
+          }
+        );
+      }
+
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}));
+        return rejectWithValue((err as any)?.message ?? `Erro ${resp.status}`); // eslint-disable-line @typescript-eslint/no-explicit-any
+      }
+      const { response } = await resp.json();
+      return { response: response as string };
+    } catch (err) {
+      return rejectWithValue(err instanceof Error ? err.message : "Erro ao enviar mensagem.");
+    }
+  }
+);
+
 const FEN_TO_BACKEND: Record<string, string> = {
   perda_peso: "perda_peso",
   baixo_imc: "imc_baixo",
@@ -496,6 +560,13 @@ const nutritionalSlice = createSlice({
     clearLlmSummary(state, action: { payload: number }) {
       delete state.llmSummaries[action.payload];
     },
+    openChat(state) { state.chatOpen = true; },
+    closeChat(state) { state.chatOpen = false; },
+    toggleChat(state) { state.chatOpen = !state.chatOpen; },
+    addChatMessage(state, action: { payload: ChatMessage }) {
+      state.chatMessages.push(action.payload);
+    },
+    clearChat(state) { state.chatMessages = []; },
     setFiltFila(state, action: { payload: string }) {
       state.filtFila = action.payload;
     },
@@ -549,6 +620,28 @@ const nutritionalSlice = createSlice({
           patient.glim_diag = glim_diag;
         }
       })
+      .addCase(sendChatMessage.pending, (state) => {
+        state.chatLoading = true;
+      })
+      .addCase(sendChatMessage.fulfilled, (state, action) => {
+        state.chatLoading = false;
+        state.chatMessages.push({
+          id: Date.now().toString(),
+          role: "assistant",
+          content: action.payload.response,
+          timestamp: new Date().toISOString(),
+        });
+      })
+      .addCase(sendChatMessage.rejected, (state, action) => {
+        state.chatLoading = false;
+        state.chatMessages.push({
+          id: Date.now().toString(),
+          role: "assistant",
+          content: (action.payload as string) ?? "Erro ao processar mensagem.",
+          timestamp: new Date().toISOString(),
+          error: true,
+        });
+      })
       .addCase(fetchLlmSummary.pending, (state, action) => {
         state.llmSummaries[action.meta.arg] = { summary: "", generated_at: "", loading: true, error: null };
       })
@@ -585,6 +678,11 @@ export const {
   markAlertAcknowledged,
   revertAlert,
   clearLlmSummary,
+  openChat,
+  closeChat,
+  toggleChat,
+  addChatMessage,
+  clearChat,
   setFiltFila,
   reset,
 } = nutritionalSlice.actions;

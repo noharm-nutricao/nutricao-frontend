@@ -33,6 +33,7 @@ import { NutritionalFilter } from "./components/NutritionalFIlter/NutritionalFil
 import { PatientCard } from "./components/PatientCard/PatientCard";
 import { PatientModal } from "./components/PatientModal/PatientModal";
 import { ChumleaCalculator } from "./components/ChumleaCalculator/ChumleaCalculator";
+import { NutritionalChat } from "./components/NutritionalChat/NutritionalChat";
 import {
   REFRESH_INTERVAL,
   SEV_CONFIG,
@@ -595,6 +596,9 @@ export function NutritionalDashboard() {
         onTabChange={setModalTab}
         onClose={() => setModalPatient(null)}
       />
+
+      {/* Floating AI chat */}
+      <NutritionalChat contextPatient={modalPatient} />
     </>
   );
 }
