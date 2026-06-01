@@ -27,17 +27,14 @@ import {
   saveNrsNut,
   confirmAllergy,
   acknowledgePatient,
-<<<<<<< Updated upstream
   markAlertAcknowledged,
   revertAlert,
   fetchAlerts,
   acknowledgeAlert,
   saveGlimToServer,
   saveAvalToServer,
-=======
-  marcarAlertaReconhecido,
-  reverterAlerta,
->>>>>>> Stashed changes
+  fetchLlmSummary,
+  clearLlmSummary,
 } from "../../NutritionalSlice";
 import { MnutricManualForm } from "../MnutricManualForm/MnutricManualForm";
 import {
@@ -100,6 +97,20 @@ export function PatientModal({
     (state: any) => (state.nutritional.alertsLoading as Record<number, boolean>)[p?.id ?? -1] ?? false // eslint-disable-line @typescript-eslint/no-explicit-any
   );
 
+  const llmSummary = useAppSelector((state: any) =>
+    p ? state.nutritional.llmSummaries[p.id] : undefined
+  );
+
+  const formatLlmGeneratedAt = (raw: string) => {
+    const date = new Date(raw);
+    if (Number.isNaN(date.getTime())) return raw;
+    const day = String(date.getDate()).padStart(2, "0");
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const hours = String(date.getHours()).padStart(2, "0");
+    const minutes = String(date.getMinutes()).padStart(2, "0");
+    return `${day}/${month} ${hours}:${minutes}`;
+  };
+
   // ── NRS tab local state ───────────────────────────────────────────────
   const [nrsA, setNrsA] = useState(0);
 
@@ -118,6 +129,7 @@ export function PatientModal({
 
   // ── Inst tab local state ──────────────────────────────────────────────
   const [antecipar, setAntecipar] = useState<string>("");
+  const [instObs, setInstObs] = useState("");
 
   // ── Initialize from patient ───────────────────────────────────────────
   useEffect(() => {
@@ -251,6 +263,17 @@ export function PatientModal({
         break;
       }
     }
+  };
+
+  const handleGenerateLlmSummary = () => {
+    if (!p) return;
+    dispatch(fetchLlmSummary(p.id));
+  };
+
+  const handleRegenerateLlmSummary = () => {
+    if (!p) return;
+    dispatch(clearLlmSummary(p.id));
+    dispatch(fetchLlmSummary(p.id));
   };
 
   // ── Tab: Resumo ───────────────────────────────────────────────────────
@@ -470,6 +493,53 @@ export function PatientModal({
           </InstPanel>
         </>
       )}
+
+      <Divider style={{ margin: "8px 0" }} />
+
+      <SectionTitle>Resumo Clínico IA</SectionTitle>
+      <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 12, marginBottom: 12 }}>
+        <Button
+          type="primary"
+          onClick={llmSummary?.summary ? handleRegenerateLlmSummary : handleGenerateLlmSummary}
+          loading={llmSummary?.loading}
+          style={{ background: "#7e57c2", borderColor: "#7e57c2" }}
+        >
+          {llmSummary?.loading
+            ? "Gerando resumo..."
+            : llmSummary?.summary
+            ? "Regenerar"
+            : "Gerar resumo"}
+        </Button>
+        {llmSummary?.loading && (
+          <span style={{ color: "#595959", fontSize: 12 }}>Gerando resumo...</span>
+        )}
+      </div>
+      {llmSummary?.error && (
+        <Alert type="error" message={llmSummary.error} showIcon style={{ marginBottom: 12 }} />
+      )}
+      {llmSummary?.summary && (
+        <>
+          <div
+            style={{
+              border: "1px solid #e8e8e8",
+              borderRadius: 8,
+              padding: 14,
+              background: "#fafafa",
+              whiteSpace: "pre-wrap",
+              lineHeight: 1.6,
+              color: "#2e3c5a",
+            }}
+          >
+            {llmSummary.summary}
+          </div>
+          <div style={{ fontSize: 11, color: "#8c8c8c", marginTop: 8 }}>
+            Gerado em {formatLlmGeneratedAt(llmSummary.generated_at)} · suporte à decisão
+          </div>
+        </>
+      )}
+      <div style={{ fontSize: 11, color: "#8c8c8c", marginTop: 12 }}>
+        Gerado por IA — suporte à decisão clínica, não substitui avaliação profissional
+      </div>
 
       <Divider style={{ margin: "8px 0" }} />
 
@@ -795,25 +865,9 @@ export function PatientModal({
 
   // ── Tab: Instabilidade ────────────────────────────────────────────────
 
-<<<<<<< Updated upstream
   const activeAlerts = p.inst.filter((i) => !i.ack);
   const activeLab = activeAlerts.filter((i) => i.t === "lab");
   const activeClinRx = activeAlerts.filter((i) => i.t !== "lab");
-=======
-  const handleReconhecerAlerta = async (alertaId: number) => {
-    dispatch(marcarAlertaReconhecido({ patientId: p.id, alertaId }));
-    try {
-      // Reutiliza mecanismo FE-14 (optimistic update)
-      await dispatch(acknowledgePatient({
-        id: p.id,
-        hora: new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
-        prof: "Nutr. Silva",
-      }));
-    } catch {
-      dispatch(reverterAlerta({ patientId: p.id, alertaId }));
-    }
-  };
->>>>>>> Stashed changes
 
   const tabInst = (
     <div>
@@ -841,7 +895,6 @@ export function PatientModal({
         </div>
       )}
 
-<<<<<<< Updated upstream
       {activeLab.length > 0 && (
         <>
           <SectionTitle>Exames laboratoriais</SectionTitle>
@@ -862,40 +915,10 @@ export function PatientModal({
                 </Button>
               </InstItemRow>
             ))}
-=======
-      {/* Seção: Exames laboratoriais */}
-      {p.inst.filter((i) => i.t === "lab").length > 0 && (
-        <>
-          <SectionTitle>Exames laboratoriais</SectionTitle>
-          <InstPanel style={{ marginBottom: 16 }}>
-            {p.inst
-              .filter((i) => i.t === "lab")
-              .map((item) => (
-                <InstItemRow key={item.id} style={{ opacity: item.reconhecido ? 0.5 : 1 }}>
-                  <InstDot $color={INST_DOT_COLOR.lab} />
-                  <span style={{ flex: 1 }}>{item.d}</span>
-                  <InstTypeLabel>lab</InstTypeLabel>
-                  {!item.reconhecido && (
-                    <Button
-                      size="small"
-                      type="primary"
-                      style={{ fontSize: 10, marginLeft: 8 }}
-                      onClick={() => handleReconhecerAlerta(item.id)}
-                    >
-                      Reconhecer
-                    </Button>
-                  )}
-                  {item.reconhecido && (
-                    <CheckCircleOutlined style={{ color: "#3a9c6e", marginLeft: 8 }} />
-                  )}
-                </InstItemRow>
-              ))}
->>>>>>> Stashed changes
           </InstPanel>
         </>
       )}
 
-<<<<<<< Updated upstream
       {activeClinRx.length > 0 && (
         <>
           <SectionTitle>Achados clínicos / prescrição</SectionTitle>
@@ -916,40 +939,10 @@ export function PatientModal({
                 </Button>
               </InstItemRow>
             ))}
-=======
-      {/* Seção: Achados clínicos / prescrição */}
-      {p.inst.filter((i) => i.t !== "lab").length > 0 && (
-        <>
-          <SectionTitle>Achados clínicos / prescrição</SectionTitle>
-          <InstPanel style={{ marginBottom: 16 }}>
-            {p.inst
-              .filter((i) => i.t !== "lab")
-              .map((item) => (
-                <InstItemRow key={item.id} style={{ opacity: item.reconhecido ? 0.5 : 1 }}>
-                  <InstDot $color={INST_DOT_COLOR[item.t] ?? "#8c8c8c"} />
-                  <span style={{ flex: 1 }}>{item.d}</span>
-                  <InstTypeLabel>{item.t}</InstTypeLabel>
-                  {!item.reconhecido && (
-                    <Button
-                      size="small"
-                      type="primary"
-                      style={{ fontSize: 10, marginLeft: 8 }}
-                      onClick={() => handleReconhecerAlerta(item.id)}
-                    >
-                      Reconhecer
-                    </Button>
-                  )}
-                  {item.reconhecido && (
-                    <CheckCircleOutlined style={{ color: "#3a9c6e", marginLeft: 8 }} />
-                  )}
-                </InstItemRow>
-              ))}
->>>>>>> Stashed changes
           </InstPanel>
         </>
       )}
 
-<<<<<<< Updated upstream
       {activeAlerts.length === 0 && (
         <Alert
           type="success"
@@ -982,25 +975,6 @@ export function PatientModal({
           rows={3}
           placeholder="Observações sobre instabilidade nutricional..."
         />
-      </div>
-
-=======
-      {/* Radio: Antecipar reavaliação */}
->>>>>>> Stashed changes
-      <div style={{ marginBottom: 16 }}>
-        <div style={{ fontSize: 12, fontWeight: 600, color: "#595959", marginBottom: 6 }}>
-          Antecipar reavaliação?
-        </div>
-        <Radio.Group
-          value={antecipar}
-          onChange={(e) => {
-            setAntecipar(e.target.value);
-            if (e.target.value === "sim") onTabChange("aval");
-          }}
-        >
-          <Radio value="sim">Sim</Radio>
-          <Radio value="nao">Não</Radio>
-        </Radio.Group>
       </div>
     </div>
   );

@@ -10,12 +10,7 @@ export interface InstItem {
   id: number;
   t: "lab" | "clin" | "rx";
   d: string;
-<<<<<<< Updated upstream
   ack: boolean;
-=======
-  id: number;
-  reconhecido?: boolean;
->>>>>>> Stashed changes
 }
 
 export interface HistEntry {
@@ -70,6 +65,13 @@ export interface AcknowledgedEntry {
   prof: string;
 }
 
+export interface LlmSummaryEntry {
+  summary: string;
+  generated_at: string;
+  loading: boolean;
+  error: string | null;
+}
+
 interface NutritionalState {
   patients: NutritionalPatient[];
   acknowledged: Record<number, AcknowledgedEntry>;
@@ -77,6 +79,7 @@ interface NutritionalState {
   error: string | null;
   filtFila: string;
   alertsLoading: Record<number, boolean>;
+  llmSummaries: Record<number, LlmSummaryEntry>;
 }
 
 
@@ -87,6 +90,7 @@ const initialState: NutritionalState = {
   error: null,
   filtFila: "",
   alertsLoading: {},
+  llmSummaries: {},
 };
 
 const ALA_MAP: Record<string, AlaType> = {
@@ -100,6 +104,20 @@ function normalizeAla(raw: string | null | undefined): AlaType {
   return ALA_MAP[raw] ?? (raw as AlaType);
 }
 
+const FEN_FROM_BACKEND: Record<string, string> = {
+  perda_peso: "perda_peso",
+  imc_baixo: "baixo_imc",
+  reducao_mm: "massa_muscular",
+};
+
+const ETIOL_FROM_BACKEND: Record<string, string> = {
+  ingestao_reduzida: "reducao_ingestao",
+  inflamacao_aguda: "doenca_inflamacao",
+  inflamacao_cronica: "doenca_inflamacao",
+  inflamacao: "doenca_inflamacao",
+  ma_absorcao: "reducao_ingestao",
+};
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function normalizeApiPatient(raw: any): NutritionalPatient {
   const c1 = raw.campo1 ?? {};
@@ -110,43 +128,32 @@ function normalizeApiPatient(raw: any): NutritionalPatient {
     nome: raw.nome ?? "",
     idade: raw.idade ?? 0,
     dias: raw.dias ?? 0,
-    // Campo 1 — scores dentro de campo1 (null quando backend ainda não calculou)
     mnutric: c1.mnutric_total ?? c1.mnutric ?? null,
     nrs: c1.nrs_total ?? c1.nrs ?? 0,
-    // sev null → card cinza (sem classificação calculada)
     sev: (raw.sev ?? null) as SeverityType | null,
     pri: raw.pri ?? 0,
     mn_dims: c1.mn_dims ?? null,
     nrs_dims: c1.nrs_dims ?? { nut: 0, doenca: 0, idade: 0 },
     apache: c1.apache ?? c1.mn_apache_manual ?? undefined,
     sofa: c1.sofa ?? c1.mn_sofa_manual ?? undefined,
-    // Clínico
     dieta: raw.dieta ?? "",
     npo: raw.npo ?? 0,
     peso: raw.peso != null ? `${raw.peso} kg` : "",
     imc: raw.imc ?? null,
-    // Acompanhamento
     haval: raw.haval ?? 999,
     glim_diag: raw.glim_diag ?? null,
-<<<<<<< Updated upstream
     glim_fen: (raw.glim_fen ?? []).map((k: string) => FEN_FROM_BACKEND[k] ?? k),
     glim_etiol: (raw.glim_etiol ?? []).map((k: string) => ETIOL_FROM_BACKEND[k] ?? k),
     inst: (raw.inst ?? []).map((i: any) => ({ // eslint-disable-line @typescript-eslint/no-explicit-any
       id: i.id ?? 0,
       t: i.t,
       d: i.d,
-      ack: i.ack ?? false,
+      ack: i.ack ?? i.reconhecido ?? false,
     })),
-=======
-    glim_fen: raw.glim_fen ?? [],
-    glim_etiol: raw.glim_etiol ?? [],
-    inst: (raw.inst ?? []).map((i: any, idx: number) => ({ ...i, id: i.id ?? idx, reconhecido: i.reconhecido ?? false })),
->>>>>>> Stashed changes
     conduta: raw.conduta ?? "",
     alergia: raw.alergia ?? null,
     alOk: raw.al_ok ?? raw.alOk ?? true,
     d7: raw.d7 ?? false,
-    // campo1 é a fonte canônica para flags de completude
     dados_incompletos: c1.dados_incompletos ?? raw.dados_incompletos ?? false,
     nrs_completo: c1.nrs_completo ?? raw.nrs_completo,
     hist: raw.hist ?? [],
@@ -239,20 +246,6 @@ const ETIOL_TO_BACKEND: Record<string, string> = {
   doenca_inflamacao: "inflamacao_aguda",
 };
 
-const FEN_FROM_BACKEND: Record<string, string> = {
-  perda_peso: "perda_peso",
-  imc_baixo: "baixo_imc",
-  reducao_mm: "massa_muscular",
-};
-
-const ETIOL_FROM_BACKEND: Record<string, string> = {
-  ingestao_reduzida: "reducao_ingestao",
-  inflamacao_aguda: "doenca_inflamacao",
-  inflamacao_cronica: "doenca_inflamacao",
-  inflamacao: "doenca_inflamacao",
-  ma_absorcao: "reducao_ingestao",
-};
-
 export const saveGlimToServer = createAsyncThunk(
   "nutritional/saveGlimToServer",
   async (
@@ -315,6 +308,23 @@ export const saveAvalToServer = createAsyncThunk(
       const axiosErr = err as AxiosError<{ error?: string; message?: string }>;
       const msg = axiosErr.response?.data?.error ?? axiosErr.response?.data?.message ?? axiosErr.message ?? "Erro ao salvar avaliação";
       return thunkAPI.rejectWithValue(msg);
+    }
+  }
+);
+
+export const fetchLlmSummary = createAsyncThunk(
+  "nutritional/fetchLlmSummary",
+  async (nratendimento: number, { rejectWithValue }) => {
+    try {
+      const res = await instance.post(
+        `/nutritional/patients/${nratendimento}/llm-summary`,
+        {},
+        setHeaders(),
+      );
+      return { nratendimento, summary: res.data.summary, generated_at: res.data.generated_at };
+    } catch (err: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
+      const axiosErr = err as AxiosError<{ message?: string }>;
+      return rejectWithValue(axiosErr?.response?.data?.message ?? "Erro ao gerar resumo.");
     }
   }
 );
@@ -410,21 +420,8 @@ const nutritionalSlice = createSlice({
         patient.inst = patient.inst.filter((i) => !i.d.includes("Alergia"));
       }
     },
-    marcarAlertaReconhecido(state, action: { payload: { patientId: number; alertaId: number } }) {
-      const { patientId, alertaId } = action.payload;
-      const patient = state.patients.find((p) => p.id === patientId);
-      if (patient) {
-        const item = patient.inst.find((i) => i.id === alertaId);
-        if (item) item.reconhecido = true;
-      }
-    },
-    reverterAlerta(state, action: { payload: { patientId: number; alertaId: number } }) {
-      const { patientId, alertaId } = action.payload;
-      const patient = state.patients.find((p) => p.id === patientId);
-      if (patient) {
-        const item = patient.inst.find((i) => i.id === alertaId);
-        if (item) item.reconhecido = false;
-      }
+    clearLlmSummary(state, action: { payload: number }) {
+      delete state.llmSummaries[action.payload];
     },
     setFiltFila(state, action: { payload: string }) {
       state.filtFila = action.payload;
@@ -492,6 +489,31 @@ const nutritionalSlice = createSlice({
           const min = String(now.getMinutes()).padStart(2, "0");
           patient.hist.unshift({ h: `${dd}/${mm} ${hh}:${min}`, p: "Nutr. Silva", c: conduta, freq, ing });
         }
+      })
+      .addCase(fetchLlmSummary.pending, (state, action) => {
+        state.llmSummaries[action.meta.arg] = {
+          summary: "",
+          generated_at: "",
+          loading: true,
+          error: null,
+        };
+      })
+      .addCase(fetchLlmSummary.fulfilled, (state, action) => {
+        const { nratendimento, summary, generated_at } = action.payload;
+        state.llmSummaries[nratendimento] = {
+          summary,
+          generated_at,
+          loading: false,
+          error: null,
+        };
+      })
+      .addCase(fetchLlmSummary.rejected, (state, action) => {
+        state.llmSummaries[action.meta.arg] = {
+          summary: "",
+          generated_at: "",
+          loading: false,
+          error: (action.payload as string) ?? "Erro ao gerar resumo.",
+        };
       });
   },
 });
@@ -502,13 +524,9 @@ export const {
   saveAval,
   confirmAllergy,
   acknowledgePatient,
-<<<<<<< Updated upstream
   markAlertAcknowledged,
   revertAlert,
-=======
-  marcarAlertaReconhecido,
-  reverterAlerta,
->>>>>>> Stashed changes
+  clearLlmSummary,
   setFiltFila,
   reset,
 } = nutritionalSlice.actions;
