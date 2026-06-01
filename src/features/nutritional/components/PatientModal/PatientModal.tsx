@@ -15,6 +15,7 @@ import {
   Button,
   Tooltip,
   message,
+  Spin,
 } from "antd";
 import { WarningOutlined, CheckCircleOutlined, ClockCircleOutlined } from "@ant-design/icons";
 import { useAppDispatch, useAppSelector } from "src/store";
@@ -27,17 +28,12 @@ import {
   saveNrsNut,
   confirmAllergy,
   acknowledgePatient,
-<<<<<<< Updated upstream
   markAlertAcknowledged,
   revertAlert,
   fetchAlerts,
   acknowledgeAlert,
   saveGlimToServer,
   saveAvalToServer,
-=======
-  marcarAlertaReconhecido,
-  reverterAlerta,
->>>>>>> Stashed changes
 } from "../../NutritionalSlice";
 import { MnutricManualForm } from "../MnutricManualForm/MnutricManualForm";
 import {
@@ -49,15 +45,10 @@ import {
   GLIM_LABEL,
   GLIM_FEN_LABEL,
   GLIM_ETIOL_LABEL,
+  alertSeverityColor,
 } from "../../nutritionalUtils";
 import { InfoBlock, SectionTitle, ScorePanel, ScorePanelTitle, ScorePanelValue, DimsGrid, DimChip, GlimPanel, GlimSectionLabel, ChipsRow, Chip, GlimDiagBadge, GovernanceNote, InstPanel, InstItemRow, InstDot, InstTypeLabel, GlimResultBox, HistEntry } from "./styles";
 
-
-const INST_DOT_COLOR: Record<string, string> = {
-  lab: "#e24b4a",
-  clin: "#d4931a",
-  rx: "#7e57c2",
-};
 
 const INST_TYPE_LABEL: Record<string, string> = {
   lab: "Laboratório",
@@ -99,6 +90,9 @@ export function PatientModal({
   const alertsLoading = useAppSelector(
     (state: any) => (state.nutritional.alertsLoading as Record<number, boolean>)[p?.id ?? -1] ?? false // eslint-disable-line @typescript-eslint/no-explicit-any
   );
+  const alertsError = useAppSelector(
+    (state: any) => (state.nutritional.alertsError as Record<number, string | null>)[p?.id ?? -1] ?? null // eslint-disable-line @typescript-eslint/no-explicit-any
+  );
 
   // ── NRS tab local state ───────────────────────────────────────────────
   const [nrsA, setNrsA] = useState(0);
@@ -118,6 +112,8 @@ export function PatientModal({
 
   // ── Inst tab local state ──────────────────────────────────────────────
   const [antecipar, setAntecipar] = useState<string>("");
+  const [acknowledgingIds, setAcknowledgingIds] = useState<Record<number, boolean>>({});
+  const [acknowledgingAll, setAcknowledgingAll] = useState(false);
 
   // ── Initialize from patient ───────────────────────────────────────────
   useEffect(() => {
@@ -140,6 +136,12 @@ export function PatientModal({
       dispatch(fetchAlerts(p.id));
     }
   }, [activeTab, p?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (p && activeTab === "inst" && alertsError) {
+      message.error(alertsError);
+    }
+  }, [p?.id, activeTab, alertsError]);
 
   if (!p) return null;
 
@@ -230,26 +232,38 @@ export function PatientModal({
   };
 
   const handleAcknowledgeAlert = async (alertId: number) => {
+    setAcknowledgingIds((prev) => ({ ...prev, [alertId]: true }));
     dispatch(markAlertAcknowledged({ patientId: p.id, alertId }));
     try {
       await dispatch(acknowledgeAlert({ patientId: p.id, alertId })).unwrap();
     } catch {
       dispatch(revertAlert({ patientId: p.id, alertId }));
       message.error("Erro ao reconhecer alerta.");
+    } finally {
+      setAcknowledgingIds((prev) => {
+        const next = { ...prev };
+        delete next[alertId];
+        return next;
+      });
     }
   };
 
   const handleAcknowledgeAll = async () => {
     const activeAlerts = p.inst.filter((i) => !i.ack);
-    for (const alert of activeAlerts) {
-      dispatch(markAlertAcknowledged({ patientId: p.id, alertId: alert.id }));
-      try {
-        await dispatch(acknowledgeAlert({ patientId: p.id, alertId: alert.id })).unwrap(); // eslint-disable-line no-await-in-loop
-      } catch {
-        dispatch(revertAlert({ patientId: p.id, alertId: alert.id }));
-        message.error("Erro ao reconhecer alertas.");
-        break;
+    setAcknowledgingAll(true);
+    try {
+      for (const alert of activeAlerts) {
+        dispatch(markAlertAcknowledged({ patientId: p.id, alertId: alert.id }));
+        try {
+          await dispatch(acknowledgeAlert({ patientId: p.id, alertId: alert.id })).unwrap(); // eslint-disable-line no-await-in-loop
+        } catch {
+          dispatch(revertAlert({ patientId: p.id, alertId: alert.id }));
+          message.error("Erro ao reconhecer alertas.");
+          break;
+        }
       }
+    } finally {
+      setAcknowledgingAll(false);
     }
   };
 
@@ -455,14 +469,16 @@ export function PatientModal({
       </GlimPanel>
 
       {/* Campo 3 */}
-      {p.inst.length > 0 && (
+      {p.inst.filter((i) => !i.ack).length > 0 && (
         <>
           <Divider style={{ margin: "8px 0" }} />
           <SectionTitle>Campo 3 – Instabilidade nutricional / gatilhos de revisão</SectionTitle>
           <InstPanel style={{ marginBottom: 12 }}>
-            {p.inst.map((item, i) => (
-              <InstItemRow key={i}>
-                <InstDot $color={INST_DOT_COLOR[item.t] ?? "#8c8c8c"} />
+            {p.inst
+              .filter((i) => !i.ack)
+              .map((item) => (
+              <InstItemRow key={item.id}>
+                <InstDot $color={alertSeverityColor(item.sev)} />
                 <span>{item.d}</span>
                 <InstTypeLabel>{INST_TYPE_LABEL[item.t] ?? item.t}</InstTypeLabel>
               </InstItemRow>
@@ -795,25 +811,9 @@ export function PatientModal({
 
   // ── Tab: Instabilidade ────────────────────────────────────────────────
 
-<<<<<<< Updated upstream
   const activeAlerts = p.inst.filter((i) => !i.ack);
   const activeLab = activeAlerts.filter((i) => i.t === "lab");
   const activeClinRx = activeAlerts.filter((i) => i.t !== "lab");
-=======
-  const handleReconhecerAlerta = async (alertaId: number) => {
-    dispatch(marcarAlertaReconhecido({ patientId: p.id, alertaId }));
-    try {
-      // Reutiliza mecanismo FE-14 (optimistic update)
-      await dispatch(acknowledgePatient({
-        id: p.id,
-        hora: new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
-        prof: "Nutr. Silva",
-      }));
-    } catch {
-      dispatch(reverterAlerta({ patientId: p.id, alertaId }));
-    }
-  };
->>>>>>> Stashed changes
 
   const tabInst = (
     <div>
@@ -841,116 +841,71 @@ export function PatientModal({
         </div>
       )}
 
-<<<<<<< Updated upstream
-      {activeLab.length > 0 && (
+      {alertsLoading && (
+        <div style={{ textAlign: "center", padding: 24 }}>
+          <Spin />
+        </div>
+      )}
+
+      {!alertsLoading && alertsError && (
+        <Alert
+          type="error"
+          showIcon
+          message="Erro ao carregar alertas"
+          description={alertsError}
+          style={{ marginBottom: 16 }}
+        />
+      )}
+
+      {!alertsLoading && !alertsError && activeLab.length > 0 && (
         <>
           <SectionTitle>Exames laboratoriais</SectionTitle>
           <InstPanel style={{ marginBottom: 16 }}>
             {activeLab.map((item) => (
               <InstItemRow key={item.id}>
-                <InstDot $color={INST_DOT_COLOR.lab} />
+                <InstDot $color={alertSeverityColor(item.sev)} />
                 <span style={{ flex: 1 }}>{item.d}</span>
-                <InstTypeLabel>Laboratório</InstTypeLabel>
+                <InstTypeLabel>{item.t}</InstTypeLabel>
                 <Button
                   size="small"
                   type="text"
                   style={{ marginLeft: 8, fontSize: 11, color: "#3a9c6e" }}
-                  loading={alertsLoading}
+                  loading={!!acknowledgingIds[item.id]}
                   onClick={() => handleAcknowledgeAlert(item.id)}
                 >
                   Reconhecer
                 </Button>
               </InstItemRow>
             ))}
-=======
-      {/* Seção: Exames laboratoriais */}
-      {p.inst.filter((i) => i.t === "lab").length > 0 && (
-        <>
-          <SectionTitle>Exames laboratoriais</SectionTitle>
-          <InstPanel style={{ marginBottom: 16 }}>
-            {p.inst
-              .filter((i) => i.t === "lab")
-              .map((item) => (
-                <InstItemRow key={item.id} style={{ opacity: item.reconhecido ? 0.5 : 1 }}>
-                  <InstDot $color={INST_DOT_COLOR.lab} />
-                  <span style={{ flex: 1 }}>{item.d}</span>
-                  <InstTypeLabel>lab</InstTypeLabel>
-                  {!item.reconhecido && (
-                    <Button
-                      size="small"
-                      type="primary"
-                      style={{ fontSize: 10, marginLeft: 8 }}
-                      onClick={() => handleReconhecerAlerta(item.id)}
-                    >
-                      Reconhecer
-                    </Button>
-                  )}
-                  {item.reconhecido && (
-                    <CheckCircleOutlined style={{ color: "#3a9c6e", marginLeft: 8 }} />
-                  )}
-                </InstItemRow>
-              ))}
->>>>>>> Stashed changes
           </InstPanel>
         </>
       )}
 
-<<<<<<< Updated upstream
-      {activeClinRx.length > 0 && (
+      {!alertsLoading && !alertsError && activeClinRx.length > 0 && (
         <>
           <SectionTitle>Achados clínicos / prescrição</SectionTitle>
           <InstPanel style={{ marginBottom: 16 }}>
             {activeClinRx.map((item) => (
               <InstItemRow key={item.id}>
-                <InstDot $color={INST_DOT_COLOR[item.t] ?? "#8c8c8c"} />
+                <InstDot $color={alertSeverityColor(item.sev)} />
                 <span style={{ flex: 1 }}>{item.d}</span>
-                <InstTypeLabel>{INST_TYPE_LABEL[item.t] ?? item.t}</InstTypeLabel>
+                <InstTypeLabel>{item.t}</InstTypeLabel>
                 <Button
                   size="small"
                   type="text"
                   style={{ marginLeft: 8, fontSize: 11, color: "#3a9c6e" }}
-                  loading={alertsLoading}
+                  loading={!!acknowledgingIds[item.id]}
                   onClick={() => handleAcknowledgeAlert(item.id)}
                 >
                   Reconhecer
                 </Button>
               </InstItemRow>
             ))}
-=======
-      {/* Seção: Achados clínicos / prescrição */}
-      {p.inst.filter((i) => i.t !== "lab").length > 0 && (
-        <>
-          <SectionTitle>Achados clínicos / prescrição</SectionTitle>
-          <InstPanel style={{ marginBottom: 16 }}>
-            {p.inst
-              .filter((i) => i.t !== "lab")
-              .map((item) => (
-                <InstItemRow key={item.id} style={{ opacity: item.reconhecido ? 0.5 : 1 }}>
-                  <InstDot $color={INST_DOT_COLOR[item.t] ?? "#8c8c8c"} />
-                  <span style={{ flex: 1 }}>{item.d}</span>
-                  <InstTypeLabel>{item.t}</InstTypeLabel>
-                  {!item.reconhecido && (
-                    <Button
-                      size="small"
-                      type="primary"
-                      style={{ fontSize: 10, marginLeft: 8 }}
-                      onClick={() => handleReconhecerAlerta(item.id)}
-                    >
-                      Reconhecer
-                    </Button>
-                  )}
-                  {item.reconhecido && (
-                    <CheckCircleOutlined style={{ color: "#3a9c6e", marginLeft: 8 }} />
-                  )}
-                </InstItemRow>
-              ))}
->>>>>>> Stashed changes
           </InstPanel>
         </>
       )}
 
-<<<<<<< Updated upstream
-      {activeAlerts.length === 0 && (
+      {!alertsLoading && !alertsError && activeAlerts.length === 0 && (
         <Alert
           type="success"
           showIcon
@@ -960,11 +915,11 @@ export function PatientModal({
         />
       )}
 
-      {activeAlerts.length > 0 && (
+      {!alertsLoading && !alertsError && activeAlerts.length > 0 && (
         <Button
           block
           type="primary"
-          loading={alertsLoading}
+          loading={acknowledgingAll}
           style={{ marginBottom: 16 }}
           onClick={handleAcknowledgeAll}
         >
@@ -972,21 +927,6 @@ export function PatientModal({
         </Button>
       )}
 
-      <div style={{ marginBottom: 16 }}>
-        <div style={{ fontSize: 12, fontWeight: 600, color: "#595959", marginBottom: 6 }}>
-          Observações
-        </div>
-        <Input.TextArea
-          value={instObs}
-          onChange={(e) => setInstObs(e.target.value)}
-          rows={3}
-          placeholder="Observações sobre instabilidade nutricional..."
-        />
-      </div>
-
-=======
-      {/* Radio: Antecipar reavaliação */}
->>>>>>> Stashed changes
       <div style={{ marginBottom: 16 }}>
         <div style={{ fontSize: 12, fontWeight: 600, color: "#595959", marginBottom: 6 }}>
           Antecipar reavaliação?

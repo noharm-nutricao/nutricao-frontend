@@ -1,6 +1,7 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import { AxiosError } from "axios";
 import api, { instance, setHeaders } from "services/api";
+import { sanitizeAlertDescription } from "./alertUtils";
 
 export type AlaType = "UTI" | "B" | "C";
 export type SeverityType = "cr" | "al" | "md" | "bx";
@@ -10,12 +11,8 @@ export interface InstItem {
   id: number;
   t: "lab" | "clin" | "rx";
   d: string;
-<<<<<<< Updated upstream
+  sev: string;
   ack: boolean;
-=======
-  id: number;
-  reconhecido?: boolean;
->>>>>>> Stashed changes
 }
 
 export interface HistEntry {
@@ -77,6 +74,7 @@ interface NutritionalState {
   error: string | null;
   filtFila: string;
   alertsLoading: Record<number, boolean>;
+  alertsError: Record<number, string | null>;
 }
 
 
@@ -87,6 +85,7 @@ const initialState: NutritionalState = {
   error: null,
   filtFila: "",
   alertsLoading: {},
+  alertsError: {},
 };
 
 const ALA_MAP: Record<string, AlaType> = {
@@ -98,6 +97,18 @@ const ALA_MAP: Record<string, AlaType> = {
 function normalizeAla(raw: string | null | undefined): AlaType {
   if (!raw) return "C";
   return ALA_MAP[raw] ?? (raw as AlaType);
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function normalizeInstItem(i: any): InstItem {
+  const rawDesc = i.descricao ?? i.d ?? "";
+  return {
+    id: i.id ?? 0,
+    t: (i.tipo ?? i.t ?? "clin") as InstItem["t"],
+    d: sanitizeAlertDescription(rawDesc) || rawDesc,
+    sev: i.severidade ?? i.sev ?? "amarelo",
+    ack: i.reconhecido ?? i.ack ?? false,
+  };
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -128,20 +139,9 @@ function normalizeApiPatient(raw: any): NutritionalPatient {
     // Acompanhamento
     haval: raw.haval ?? 999,
     glim_diag: raw.glim_diag ?? null,
-<<<<<<< Updated upstream
     glim_fen: (raw.glim_fen ?? []).map((k: string) => FEN_FROM_BACKEND[k] ?? k),
     glim_etiol: (raw.glim_etiol ?? []).map((k: string) => ETIOL_FROM_BACKEND[k] ?? k),
-    inst: (raw.inst ?? []).map((i: any) => ({ // eslint-disable-line @typescript-eslint/no-explicit-any
-      id: i.id ?? 0,
-      t: i.t,
-      d: i.d,
-      ack: i.ack ?? false,
-    })),
-=======
-    glim_fen: raw.glim_fen ?? [],
-    glim_etiol: raw.glim_etiol ?? [],
-    inst: (raw.inst ?? []).map((i: any, idx: number) => ({ ...i, id: i.id ?? idx, reconhecido: i.reconhecido ?? false })),
->>>>>>> Stashed changes
+    inst: (raw.inst ?? []).map(normalizeInstItem),
     conduta: raw.conduta ?? "",
     alergia: raw.alergia ?? null,
     alOk: raw.al_ok ?? raw.alOk ?? true,
@@ -204,11 +204,11 @@ export const fetchAlerts = createAsyncThunk(
       const raw: any[] = Array.isArray(response.data) ? response.data : response.data?.data ?? []; // eslint-disable-line @typescript-eslint/no-explicit-any
       return {
         patientId,
-        alerts: raw.map((i: any) => ({ id: i.id ?? 0, t: i.t, d: i.d, ack: i.ack ?? false })), // eslint-disable-line @typescript-eslint/no-explicit-any
+        alerts: raw.map(normalizeInstItem),
       };
     } catch (err) {
       const axiosErr = err as AxiosError<{ error?: string; message?: string }>;
-      const msg = axiosErr.response?.data?.error ?? axiosErr.response?.data?.message ?? axiosErr.message ?? "Error loading alerts";
+      const msg = axiosErr.response?.data?.error ?? axiosErr.response?.data?.message ?? axiosErr.message ?? "Erro ao carregar alertas";
       return thunkAPI.rejectWithValue(msg);
     }
   }
@@ -410,22 +410,6 @@ const nutritionalSlice = createSlice({
         patient.inst = patient.inst.filter((i) => !i.d.includes("Alergia"));
       }
     },
-    marcarAlertaReconhecido(state, action: { payload: { patientId: number; alertaId: number } }) {
-      const { patientId, alertaId } = action.payload;
-      const patient = state.patients.find((p) => p.id === patientId);
-      if (patient) {
-        const item = patient.inst.find((i) => i.id === alertaId);
-        if (item) item.reconhecido = true;
-      }
-    },
-    reverterAlerta(state, action: { payload: { patientId: number; alertaId: number } }) {
-      const { patientId, alertaId } = action.payload;
-      const patient = state.patients.find((p) => p.id === patientId);
-      if (patient) {
-        const item = patient.inst.find((i) => i.id === alertaId);
-        if (item) item.reconhecido = false;
-      }
-    },
     setFiltFila(state, action: { payload: string }) {
       state.filtFila = action.payload;
     },
@@ -448,16 +432,22 @@ const nutritionalSlice = createSlice({
         state.error = (action.payload as string) ?? action.error.message ?? "Erro desconhecido";
       })
       .addCase(fetchAlerts.pending, (state, action) => {
-        state.alertsLoading[action.meta.arg] = true;
+        const patientId = action.meta.arg;
+        state.alertsLoading[patientId] = true;
+        state.alertsError[patientId] = null;
       })
       .addCase(fetchAlerts.fulfilled, (state, action) => {
         const { patientId, alerts } = action.payload;
         state.alertsLoading[patientId] = false;
+        state.alertsError[patientId] = null;
         const patient = state.patients.find((p) => p.id === patientId);
         if (patient) patient.inst = alerts;
       })
       .addCase(fetchAlerts.rejected, (state, action) => {
-        state.alertsLoading[action.meta.arg] = false;
+        const patientId = action.meta.arg;
+        state.alertsLoading[patientId] = false;
+        state.alertsError[patientId] =
+          (action.payload as string) ?? action.error.message ?? "Erro ao carregar alertas";
       })
       .addCase(saveMnutricManual.fulfilled, (state, action) => {
         const { id, campo1 } = action.payload;
@@ -502,13 +492,8 @@ export const {
   saveAval,
   confirmAllergy,
   acknowledgePatient,
-<<<<<<< Updated upstream
   markAlertAcknowledged,
   revertAlert,
-=======
-  marcarAlertaReconhecido,
-  reverterAlerta,
->>>>>>> Stashed changes
   setFiltFila,
   reset,
 } = nutritionalSlice.actions;

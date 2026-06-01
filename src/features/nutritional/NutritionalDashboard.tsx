@@ -42,6 +42,7 @@ import {
   getPatientScore,
   scoreColorMnutric,
   scoreColorNrs,
+  alertDescriptionLabel,
 } from "./nutritionalUtils";
 import { SummaryBar, SummaryItem, SummaryRight, WardSection, WardHeader, WardLeft, WardDot, WardName, WardSub, BedGrid, EmptyBed, ListCard, ListCardBody, ListCell, ListCellLabel, InlineBadge, ListCardFooter } from "./styles";
 
@@ -341,8 +342,9 @@ export function NutritionalDashboard() {
                           ? "#d4931a"
                           : "#3a9c6e";
 
-                    const instTags = p.inst.slice(0, 3);
-                    const instMore = p.inst.length > 3 ? p.inst.length - 3 : 0;
+                    const activeInst = p.inst.filter((i) => !i.ack);
+                    const instTags = activeInst.slice(0, 3);
+                    const instMore = activeInst.length > 3 ? activeInst.length - 3 : 0;
 
                     return (
                       <ListCard key={p.id} $leftColor={sevCfg.leftBorder}>
@@ -469,7 +471,7 @@ export function NutritionalDashboard() {
                           {/* Campo 3 · Instabilidade */}
                           <ListCell>
                             <ListCellLabel>Campo 3 · Instabilidade</ListCellLabel>
-                            {p.inst.length === 0 ? (
+                            {activeInst.length === 0 ? (
                               <span style={{ fontSize: 11, color: "#bdbdbd" }}>—</span>
                             ) : (
                               <div style={{ display: "flex", flexWrap: "wrap", gap: 3 }}>
@@ -487,7 +489,7 @@ export function NutritionalDashboard() {
                                         $color={tagStyle.color}
                                         $border={tagStyle.border}
                                       >
-                                        {item.d.split(" ")[0]}
+                                        {alertDescriptionLabel(item.d)}
                                       </InlineBadge>
                                     </Tooltip>
                                   );

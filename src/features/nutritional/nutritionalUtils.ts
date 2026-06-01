@@ -126,3 +126,18 @@ export function scoreColorMnutric(v: number): string {
 export function scoreColorNrs(v: number): string {
   return SEV_CONFIG[sevNRS(v)].leftBorder;
 }
+
+const ALERT_SEV_COLOR: Record<string, string> = {
+  vermelho: "#e24b4a",
+  laranja: "#d4931a",
+  amarelo: "#f5c542",
+  alta: "#e24b4a",
+  media: "#d4931a",
+  baixa: "#f5c542",
+};
+
+export function alertSeverityColor(sev: string): string {
+  return ALERT_SEV_COLOR[sev?.toLowerCase()] ?? "#d4931a";
+}
+
+export { sanitizeAlertDescription, alertDescriptionLabel } from "./alertUtils";

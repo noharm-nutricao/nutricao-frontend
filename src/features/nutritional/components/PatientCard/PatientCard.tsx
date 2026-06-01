@@ -11,6 +11,7 @@ import {
   sevMNUTRIC,
   sevNRS,
   GLIM_LABEL,
+  alertDescriptionLabel,
 } from "../../nutritionalUtils";
 import { CardBody, CardTop, BedLabel, BadgeRow, PatientName, PatientMeta, SectionLabel, ScoreDual, ScoreChip, ScoreSingle, GlimText, TagsRow, CardFooter, ActionBtn, Badge, Card } from "./styles";
 import { Tooltip } from "antd";
@@ -54,8 +55,9 @@ export function PatientCard({
           ? "#3a9c6e"
           : "#d4931a";
 
-  const instSlice = p.inst.slice(0, 3);
-  const instMore = p.inst.length > 3 ? p.inst.length - 3 : 0;
+  const activeInst = p.inst.filter((i) => !i.ack);
+  const instSlice = activeInst.slice(0, 3);
+  const instMore = activeInst.length > 3 ? activeInst.length - 3 : 0;
 
   return (
     <Card $sev={p.sev} $atend={isAtend}>
@@ -160,7 +162,7 @@ export function PatientCard({
         </GlimText>
 
         {/* Campo 3 – Instabilidade */}
-        {p.inst.length > 0 && (
+        {activeInst.length > 0 && (
           <>
             <SectionLabel>Campo 3 – Instabilidade</SectionLabel>
             <TagsRow>
@@ -169,7 +171,7 @@ export function PatientCard({
                 return (
                   <Tooltip key={i} title={item.d}>
                     <Badge $bg={st.bg} $color={st.color} $border={st.border}>
-                      {item.d.split(" ")[0]}
+                      {alertDescriptionLabel(item.d)}
                     </Badge>
                   </Tooltip>
                 );
