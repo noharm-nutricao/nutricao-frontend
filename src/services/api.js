@@ -955,7 +955,7 @@ api.nutritional.getPatients = (params = {}) =>
   });
 
 api.nutritional.saveNrsNut = (nratendimento, data) =>
-  instance.put(`/nutritional/patients/${nratendimento}/nrs-nut`, data, {
+  instance.put(`/nutritional/patients/${nratendimento}/mnutric-manual`, data, {
     ...setHeaders(),
   });
 
