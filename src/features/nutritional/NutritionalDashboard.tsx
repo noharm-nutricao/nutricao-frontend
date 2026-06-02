@@ -44,7 +44,6 @@ import {
   getPatientScore,
   scoreColorMnutric,
   scoreColorNrs,
-  matchFila,
 } from "./nutritionalUtils";
 import { SummaryBar, SummaryItem, SummaryRight, WardSection, WardHeader, WardLeft, WardDot, WardName, WardSub, BedGrid, EmptyBed, ListCard, ListCardBody, ListCell, ListCellLabel, InlineBadge, ListCardFooter } from "./styles";
 
