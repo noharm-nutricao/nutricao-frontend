@@ -13,10 +13,11 @@ import {
   UnorderedListOutlined,
   CheckCircleOutlined,
   ClockCircleOutlined,
+  CalculatorOutlined,
 } from "@ant-design/icons";
 
 import { useAppDispatch, useAppSelector } from "src/store";
-import { selectFila1, selectFila2, selectFila5 } from "src/store/selectors/nutritionalSelectors";
+import { selectFila1, selectFila2, selectFila3, selectFila4, selectFila5 } from "src/store/selectors/nutritionalSelectors";
 import { FeatureService } from "src/services/FeatureService";
 import Feature from "src/models/Feature";
 import { PageHeader } from "src/styles/PageHeader.style";
@@ -32,6 +33,7 @@ import {
 import { NutritionalFilter } from "./components/NutritionalFIlter/NutritionalFilter";
 import { PatientCard } from "./components/PatientCard/PatientCard";
 import { PatientModal } from "./components/PatientModal/PatientModal";
+import { ChumleaCalculator } from "./components/ChumleaCalculator/ChumleaCalculator";
 import {
   REFRESH_INTERVAL,
   SEV_CONFIG,
@@ -42,6 +44,7 @@ import {
   getPatientScore,
   scoreColorMnutric,
   scoreColorNrs,
+  matchFila,
 } from "./nutritionalUtils";
 import { SummaryBar, SummaryItem, SummaryRight, WardSection, WardHeader, WardLeft, WardDot, WardName, WardSub, BedGrid, EmptyBed, ListCard, ListCardBody, ListCell, ListCellLabel, InlineBadge, ListCardFooter } from "./styles";
 
@@ -50,12 +53,14 @@ export function NutritionalDashboard() {
 
   const dispatch = useAppDispatch();
 
-  const filtFila = useAppSelector((state: any) => state.nutritional.filtFila as string);
+  const filtFila = useAppSelector((state) => state.nutritional.filtFila);
   const fila1Patients = useAppSelector(selectFila1);
   const fila2Patients = useAppSelector(selectFila2);
+  const fila3Patients = useAppSelector(selectFila3);
+  const fila4Patients = useAppSelector(selectFila4);
   const fila5Patients = useAppSelector(selectFila5);
   const { patients, acknowledged, loading, error } = useAppSelector(
-    (state: any) => state.nutritional
+    (state) => state.nutritional
   );
 
   const [viewMode, setViewMode] = useState<"grid" | "lista">("grid");
@@ -65,6 +70,7 @@ export function NutritionalDashboard() {
   const [modalTab, setModalTab] = useState("vis");
   const [modalPatient, setModalPatient] = useState<NutritionalPatient | null>(null);
   const [filtAlergia, setFiltAlergia] = useState<"" | "com" | "pendente">("");
+  const [showChumlea, setShowChumlea] = useState(false);
 
 
   // ── Auto-fetch + 15-min refresh ─────────────────────────────────────────
@@ -75,6 +81,7 @@ export function NutritionalDashboard() {
   }, [dispatch]);
 
   // ── Filtered + sorted list ──────────────────────────────────────────────
+  // matchFila is a pure module-level function — no closure, not a dep.
   const filtered = useMemo(() => {
     let list: NutritionalPatient[] = [...patients];
     if (filtAla !== "all" && filtAla !== "") {
@@ -173,6 +180,12 @@ export function NutritionalDashboard() {
           </span>
         </div>
         <div className="page-header-actions">
+          <Button
+            icon={<CalculatorOutlined />}
+            onClick={() => setShowChumlea(true)}
+          >
+            Chumlea
+          </Button>
           <Segmented
             value={viewMode}
             onChange={(v) => setViewMode(v as "grid" | "lista")}
@@ -202,6 +215,8 @@ export function NutritionalDashboard() {
         countsFila={{
           FILA1: fila1Patients.length,
           FILA2: fila2Patients.length,
+          FILA3: fila3Patients.length,
+          FILA4: fila4Patients.length,
           FILA5: fila5Patients.length,
         }}
         sortAsc={sortAsc}
@@ -593,6 +608,12 @@ export function NutritionalDashboard() {
           )}
         </div>
       )}
+
+      {/* Chumlea calculator modal */}
+      <ChumleaCalculator
+        open={showChumlea}
+        onClose={() => setShowChumlea(false)}
+      />
 
       {/* Patient detail modal */}
       <PatientModal
