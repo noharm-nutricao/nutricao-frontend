@@ -415,6 +415,14 @@ const nutritionalSlice = createSlice({
       .addCase(fetchPatients.fulfilled, (state, action) => {
         state.loading = false;
         state.patients = action.payload;
+        // ── MOCK ALERGIA — remover após testar ──────────────────
+        /*if (state.patients.length >= 2) {
+          state.patients[0].alergia = "Dipirona";
+          state.patients[0].alOk = true;   // aparece só em "Com alergia"
+
+          state.patients[1].alergia = "Penicilina";
+          state.patients[1].alOk = false;  // aparece em "Com alergia" E "Alg. pendente"
+        }*/
       })
       .addCase(fetchPatients.rejected, (state, action) => {
         state.loading = false;

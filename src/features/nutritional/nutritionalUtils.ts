@@ -44,6 +44,11 @@ export const ALA_COLORS: Record<AlaType, string> = {
   C: "#80cbc4",
 };
 
+export const ALERGIA_BTNS = [
+  { key: "com",      label: "Com alergia",   color: "#cf1322" },
+  { key: "pendente", label: "Alg. pendente", color: "#a8071a" },
+];
+
 export const ALA_CONFIG: Record<
   AlaType,
   { nome: string; color: string; total: number; protocol: string }

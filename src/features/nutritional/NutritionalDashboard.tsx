@@ -64,6 +64,7 @@ export function NutritionalDashboard() {
   const [sortAsc, setSortAsc] = useState(false);
   const [modalTab, setModalTab] = useState("vis");
   const [modalPatient, setModalPatient] = useState<NutritionalPatient | null>(null);
+  const [filtAlergia, setFiltAlergia] = useState<"" | "com" | "pendente">("");
 
 
   // ── Auto-fetch + 15-min refresh ─────────────────────────────────────────
@@ -82,6 +83,12 @@ export function NutritionalDashboard() {
     if (filtSev && filtSev !== "all") {
       list = list.filter((p) => p.sev === filtSev);
     }
+    if (filtAlergia === "com") {
+      list = list.filter((p) => p.alergia !== null);
+    }
+    if (filtAlergia === "pendente") {
+      list = list.filter((p) => p.alergia !== null && !p.alOk);
+    }
     if (filtFila) {
       list = list.filter((p) => matchFila(p, filtFila, acknowledged));
     }
@@ -90,7 +97,7 @@ export function NutritionalDashboard() {
         ? getPatientScore(a) - getPatientScore(b)
         : getPatientScore(b) - getPatientScore(a)
     );
-  }, [patients, filtAla, filtSev, filtFila, sortAsc, acknowledged]);
+  }, [patients, filtAla, filtSev, filtFila, filtAlergia, sortAsc, acknowledged]);
 
   // ── Summary counts ──────────────────────────────────────────────────────
   const summary = useMemo(
@@ -106,6 +113,11 @@ export function NutritionalDashboard() {
     }),
     [patients, acknowledged]
   );
+
+  const countsAlergia = useMemo(() => ({
+    com: patients.filter((p: NutritionalPatient) => p.alergia !== null).length,
+    pendente: patients.filter((p: NutritionalPatient) => p.alergia !== null && !p.alOk).length,
+  }), [patients]);
 
   function matchFila(
     p: NutritionalPatient,
@@ -184,6 +196,8 @@ export function NutritionalDashboard() {
       <NutritionalFilter
         filtAla={filtAla}
         filtSev={filtSev}
+        filtAlergia={filtAlergia}
+        countsAlergia={countsAlergia}
         filtFila={filtFila}
         countsFila={{
           FILA1: fila1Patients.length,
@@ -193,6 +207,7 @@ export function NutritionalDashboard() {
         sortAsc={sortAsc}
         onAlaChange={setFiltAla}
         onSevChange={setFiltSev}
+        onAlergiaChange={setFiltAlergia}
         onFilaChange={(val) => dispatch(setFiltFilaAction(val))}
         onSortToggle={() => setSortAsc((v) => !v)}
       />

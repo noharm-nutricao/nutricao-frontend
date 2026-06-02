@@ -1,12 +1,14 @@
 import { Affix } from "antd";
 import { useState } from "react";
 import { SortAscendingOutlined, SortDescendingOutlined } from "@ant-design/icons";
-import { ALA_COLORS, ALA_CONFIG, ALA_ORDER, FILA_BTNS, RISCO_BTNS } from "../../nutritionalUtils";
+import { ALA_COLORS, ALA_CONFIG, ALA_ORDER, FILA_BTNS, RISCO_BTNS, ALERGIA_BTNS } from "../../nutritionalUtils";
 import { FilterBar, FilterGroup, FilterLabel, FilterBtn, FilterDivider, SortBtn } from "./styles";
 
 interface NutritionalFilterProps {
   filtAla: string;
   filtSev: string;
+  filtAlergia: "" | "com" | "pendente";
+  countsAlergia: Record<string, number>;
   filtFila: string;
   countsFila: Record<string, number>;
   sortAsc: boolean;
@@ -14,17 +16,21 @@ interface NutritionalFilterProps {
   onSevChange: (sev: string) => void;
   onFilaChange: (fila: string) => void;
   onSortToggle: () => void;
+  onAlergiaChange: (val: "" | "com" | "pendente") => void;
 }
 
 export function NutritionalFilter({
   filtAla,
   filtSev,
   filtFila,
+  filtAlergia,
   countsFila,
+  countsAlergia,
   sortAsc,
   onAlaChange,
   onSevChange,
   onFilaChange,
+  onAlergiaChange,
   onSortToggle,
 }: NutritionalFilterProps) {
   
@@ -34,6 +40,10 @@ export function NutritionalFilter({
     onFilaChange("");
     onSevChange(filtSev === key ? "" : key);
   };
+
+  const handleAlergiaClick = (key: "com" | "pendente") => {
+    onAlergiaChange(filtAlergia === key ? "" : key);
+  }
 
   const handleFilaClick = (key: string) => {
     onSevChange("");
@@ -66,6 +76,32 @@ export function NutritionalFilter({
         </FilterGroup>
 
         <FilterDivider />
+
+        {/* Alergia */}
+        <FilterGroup>
+          <FilterLabel>Alergia</FilterLabel>
+          {ALERGIA_BTNS.map(({ key, label, color }) => (
+            <FilterBtn
+              key={key}
+              $active={filtAlergia === key}
+              $color={color}
+              onClick={() => handleAlergiaClick(key as "com" | "pendente")}
+            >
+              {label}
+              <span style={{
+                background: filtAlergia === key ? color : '#e0e0e0',
+                color: filtAlergia === key ? '#fff' : '#696766',
+                borderRadius: '10px',
+                padding: '1px 6px',
+                fontSize: '10px',
+                marginLeft: '6px',
+                fontWeight: 'bold'
+              }}>
+                {countsAlergia[key] || 0}
+              </span>
+            </FilterBtn>
+          ))}
+        </FilterGroup>
 
         {/* Fila */}
         <FilterGroup>
