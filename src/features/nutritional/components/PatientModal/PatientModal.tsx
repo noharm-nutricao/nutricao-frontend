@@ -189,25 +189,28 @@ export function PatientModal({
     );
   };
 
-  const handleSaveGlim = () => {
-    if (!glimCanSave) return;
-    dispatch(
-      saveGlimToServer({
-        id: p.id,
-        glim_fen: fenSelected,
-        glim_etiol: etiolSelected,
-        glim_diag: grad as GlimDiag,
-      })
-    );
-  };
+  const handleSaveGlim = async () => {
+  if (!glimCanSave) return;
+  const result = await dispatch(saveGlimToServer({ id: p.id, glim_fen: fenSelected, glim_etiol: etiolSelected, glim_diag: grad as GlimDiag }));
+  if (saveGlimToServer.fulfilled.match(result)) {
+    message.success("Diagnóstico GLIM salvo com sucesso.");
+  } else {
+    message.error(`Erro ao salvar GLIM: ${(result as any).payload ?? "erro desconhecido"}`);
+  }
+};
 
   const handleSaveNrs = () => {
     dispatch(saveNrsNut({ id: p.id, nut: nrsA }));
   };
 
-  const handleSaveAval = () => {
-    dispatch(saveAvalToServer({ id: p.id, conduta, freq, ing: ingestion }));
-  };
+  const handleSaveAval = async () => {
+  const result = await dispatch(saveAvalToServer({ id: p.id, conduta, freq, ing: ingestion }));
+  if (saveAvalToServer.fulfilled.match(result)) {
+    message.success("Avaliação registrada com sucesso.");
+  } else {
+    message.error(`Erro ao registrar avaliação: ${(result as any).payload ?? "erro desconhecido"}`);
+  }
+};
 
   const handleConfirmAllergy = () => {
     dispatch(confirmAllergy({ id: p.id }));

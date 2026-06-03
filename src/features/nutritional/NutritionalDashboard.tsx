@@ -67,7 +67,10 @@ export function NutritionalDashboard() {
   const [filtSev, setFiltSev] = useState("");
   const [sortAsc, setSortAsc] = useState(false);
   const [modalTab, setModalTab] = useState("vis");
-  const [modalPatient, setModalPatient] = useState<NutritionalPatient | null>(null);
+  const [modalPatientId, setModalPatientId] = useState<number | null>(null);
+  const modalPatient = modalPatientId !== null
+    ? (patients.find((p: NutritionalPatient) => p.id === modalPatientId) ?? null)
+    : null;
   const [showChumlea, setShowChumlea] = useState(false);
 
 
@@ -127,7 +130,7 @@ export function NutritionalDashboard() {
   };
 
   const handleOpenTab = (patient: NutritionalPatient, tab: string) => {
-    setModalPatient(patient);
+    setModalPatientId(patient.id);
     setModalTab(tab);
   };
 
@@ -593,7 +596,7 @@ export function NutritionalDashboard() {
         acknowledged={acknowledged}
         activeTab={modalTab}
         onTabChange={setModalTab}
-        onClose={() => setModalPatient(null)}
+        onClose={() => setModalPatientId(null)}
       />
     </>
   );
