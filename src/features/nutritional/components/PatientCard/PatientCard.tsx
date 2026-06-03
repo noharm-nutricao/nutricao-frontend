@@ -8,6 +8,7 @@ import { FeatureService } from "src/services/FeatureService";
 import Feature from "src/models/Feature";
 import {
   SEV_CONFIG,
+  INST_STYLE,
   calcMbcd,
   sevMNUTRIC,
   sevNRS,
@@ -23,13 +24,6 @@ interface PatientCardProps {
   onClick: () => void;
   onOpenTab: (tab: string) => void;
 }
-
-const INST_STYLE: Record<SeverityType, { bg: string; color: string; border: string }> = {
-  cr: { bg: "#fcebeb", color: "#a32d2d", border: "#f09595" },
-  al: { bg: "#fdf3dc", color: "#b7770d", border: "#fac775" },
-  md: { bg: "#f0eeff", color: "#3c3489", border: "#b39ddb" },
-  bx: { bg: "#f6ffed", color: "#389e0d", border: "#b7eb8f" },
-};
 
 const SEV_ORDER: Record<SeverityType, number> = { cr: 3, al: 2, md: 1, bx: 0 };
 
@@ -58,17 +52,18 @@ export function PatientCard({
           ? "#3a9c6e"
           : "#d4931a";
 
-  const instSlice = p.inst.slice(0, 3);
-  const instMore = p.inst.length > 3 ? p.inst.length - 3 : 0;
-  const maxInstSev: SeverityType | null = p.inst.length > 0
-    ? p.inst.reduce<SeverityType>(
-        (max, i) => SEV_ORDER[i.sev] > SEV_ORDER[max] ? i.sev : max,
+  const activeInst = p.inst.filter((i) => !i.ack);
+  const instSlice = activeInst.slice(0, 3);
+  const instMore = activeInst.length > 3 ? activeInst.length - 3 : 0;
+  const maxInstSev: SeverityType | null = activeInst.length > 0
+    ? activeInst.reduce<SeverityType>(
+        (max, i) => SEV_ORDER[i.sev ?? "bx"] > SEV_ORDER[max] ? (i.sev ?? "bx") : max,
         "bx"
       )
     : null;
 
   return (
-    <Card $sev={p.sev} $atend={isAtend}>
+    <Card $sev={maxInstSev ?? p.sev} $atend={isAtend}>
       <CardBody onClick={onClick}>
         <CardTop>
           <BedLabel>{p.leito}</BedLabel>
@@ -170,7 +165,7 @@ export function PatientCard({
         </GlimText>
 
         {/* Campo 3 – Instabilidade */}
-        {p.inst.length > 0 && (
+        {activeInst.length > 0 && (
           <>
             <SectionLabel style={{ color: maxInstSev ? INST_STYLE[maxInstSev].color : undefined }}>
               Campo 3 – Instabilidade
