@@ -228,17 +228,12 @@ export function PatientModal({
   };
 
   const handleAcknowledgeAlert = async (alertId: number) => {
-    if (ackInProgress.current) {
-      console.warn("handleAcknowledgeAlert blocked — already in progress");
-      return;
-    }
+    if (ackInProgress.current) return;
     ackInProgress.current = true;
-    console.trace(">>> handleAcknowledgeAlert CALLED, alertId:", alertId);
     try {
       dispatch(markAlertAcknowledged({ patientId: p.id, alertId }));
       const action = await dispatch(acknowledgeAlert({ patientId: p.id, alertId }));
       if (acknowledgeAlert.rejected.match(action)) {
-        console.error("AcknowledgeAlert Error:", action.payload);
         dispatch(revertAlert({ patientId: p.id, alertId }));
         message.error("Erro ao reconhecer: " + String(action.payload));
       }
@@ -248,19 +243,14 @@ export function PatientModal({
   };
 
   const handleAcknowledgeAll = async () => {
-    if (ackInProgress.current) {
-      console.warn("handleAcknowledgeAll blocked — already in progress");
-      return;
-    }
+    if (ackInProgress.current) return;
     ackInProgress.current = true;
-    console.trace(">>> handleAcknowledgeAll CALLED");
     try {
       const activeAlerts = p.inst.filter((i) => !i.ack);
       for (const alert of activeAlerts) {
         dispatch(markAlertAcknowledged({ patientId: p.id, alertId: alert.id }));
         const action = await dispatch(acknowledgeAlert({ patientId: p.id, alertId: alert.id })); // eslint-disable-line no-await-in-loop
         if (acknowledgeAlert.rejected.match(action)) {
-          console.error("AcknowledgeAll Error:", action.payload);
           dispatch(revertAlert({ patientId: p.id, alertId: alert.id }));
           message.error("Erro geral: " + String(action.payload));
           break;
