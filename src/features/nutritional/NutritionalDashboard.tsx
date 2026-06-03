@@ -7,6 +7,7 @@ import {
   Segmented,
   Spin,
   Tooltip,
+  message,
 } from "antd";
 import {
   AppstoreOutlined,
@@ -80,6 +81,14 @@ export function NutritionalDashboard() {
     const interval = setInterval(() => dispatch(fetchPatients({})), REFRESH_INTERVAL);
     return () => clearInterval(interval);
   }, [dispatch]);
+
+  // ── Close modal gracefully if patient removed from polling ──────────────
+  useEffect(() => {
+    if (modalPatientId !== null && modalPatient === null) {
+      message.warning("Paciente não encontrado — pode ter recebido alta ou sido transferido.");
+      setModalPatientId(null);
+    }
+  }, [modalPatient, modalPatientId]);
 
   // ── Filtered + sorted list ──────────────────────────────────────────────
   // matchFila is a pure module-level function — no closure, not a dep.
