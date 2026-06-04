@@ -29,6 +29,7 @@ import {
   setFiltFila as setFiltFilaAction,
   NutritionalPatient,
   AlaType,
+  AcknowledgedEntry,
 } from "./NutritionalSlice";
 import { NutritionalFilter } from "./components/NutritionalFIlter/NutritionalFilter";
 import { PatientCard } from "./components/PatientCard/PatientCard";
@@ -44,7 +45,6 @@ import {
   getPatientScore,
   scoreColorMnutric,
   scoreColorNrs,
-  matchFila,
 } from "./nutritionalUtils";
 import { SummaryBar, SummaryItem, SummaryRight, WardSection, WardHeader, WardLeft, WardDot, WardName, WardSub, BedGrid, EmptyBed, ListCard, ListCardBody, ListCell, ListCellLabel, InlineBadge, ListCardFooter } from "./styles";
 
@@ -68,6 +68,7 @@ export function NutritionalDashboard() {
   const [filtSev, setFiltSev] = useState("");
   const [sortAsc, setSortAsc] = useState(false);
   const [modalTab, setModalTab] = useState("vis");
+  const [filtAlergia, setFiltAlergia] = useState<"" | "com" | "pendente">("");
   const [modalPatientId, setModalPatientId] = useState<number | null>(null);
   const modalPatient = modalPatientId !== null
     ? (patients.find((p: NutritionalPatient) => p.id === modalPatientId) ?? null)
@@ -100,15 +101,21 @@ export function NutritionalDashboard() {
     if (filtSev && filtSev !== "all") {
       list = list.filter((p) => p.sev === filtSev);
     }
+    if (filtAlergia === "com") {
+      list = list.filter((p) => p.alergia !== null);
+    }
+    if (filtAlergia === "pendente") {
+      list = list.filter((p) => p.alergia !== null && !p.alOk);
+    }
     if (filtFila) {
-      list = list.filter((p) => matchFila(p, filtFila));
+      list = list.filter((p) => matchFila(p, filtFila, acknowledged));
     }
     return list.sort((a, b) =>
       sortAsc
         ? getPatientScore(a) - getPatientScore(b)
         : getPatientScore(b) - getPatientScore(a)
     );
-  }, [patients, filtAla, filtSev, filtFila, sortAsc]);
+  }, [patients, filtAla, filtSev, filtFila, filtAlergia, sortAsc, acknowledged]);
 
   // ── Summary counts ──────────────────────────────────────────────────────
   const summary = useMemo(
@@ -124,6 +131,23 @@ export function NutritionalDashboard() {
     }),
     [patients, acknowledged]
   );
+
+  const countsAlergia = useMemo(() => ({
+    com: patients.filter((p: NutritionalPatient) => p.alergia !== null).length,
+    pendente: patients.filter((p: NutritionalPatient) => p.alergia !== null && !p.alOk).length,
+  }), [patients]);
+
+  function matchFila(
+    p: NutritionalPatient,
+    filtFila: string,
+    _acknowledged: Record<number, AcknowledgedEntry>
+  ): boolean {
+    if (!filtFila || filtFila === "all") return true;
+    if (filtFila === "FILA1") return (p.sev === "cr" || p.sev === "al") && p.haval > 18;
+    if (filtFila === "FILA2") return p.haval >= 12 && p.haval <= 24;
+    if (filtFila === "FILA5") return p.d7 === true;
+    return true;
+  };
 
   const handleAcknowledge = (id: number) => {
     dispatch(
@@ -196,6 +220,8 @@ export function NutritionalDashboard() {
       <NutritionalFilter
         filtAla={filtAla}
         filtSev={filtSev}
+        filtAlergia={filtAlergia}
+        countsAlergia={countsAlergia}
         filtFila={filtFila}
         countsFila={{
           FILA1: fila1Patients.length,
@@ -207,6 +233,7 @@ export function NutritionalDashboard() {
         sortAsc={sortAsc}
         onAlaChange={setFiltAla}
         onSevChange={setFiltSev}
+        onAlergiaChange={setFiltAlergia}
         onFilaChange={(val) => dispatch(setFiltFilaAction(val))}
         onSortToggle={() => setSortAsc((v) => !v)}
       />
