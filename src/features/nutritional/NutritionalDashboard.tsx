@@ -7,6 +7,7 @@ import {
   Segmented,
   Spin,
   Tooltip,
+  message,
 } from "antd";
 import {
   AppstoreOutlined,
@@ -81,6 +82,14 @@ export function NutritionalDashboard() {
     const interval = setInterval(() => dispatch(fetchPatients({})), REFRESH_INTERVAL);
     return () => clearInterval(interval);
   }, [dispatch]);
+
+  // ── Close modal gracefully if patient removed from polling ──────────────
+  useEffect(() => {
+    if (modalPatientId !== null && modalPatient === null) {
+      message.warning("Paciente não encontrado — pode ter recebido alta ou sido transferido.");
+      setModalPatientId(null);
+    }
+  }, [modalPatient, modalPatientId]);
 
   // ── Filtered + sorted list ──────────────────────────────────────────────
   // matchFila is a pure module-level function — no closure, not a dep.
@@ -366,12 +375,11 @@ export function NutritionalDashboard() {
                     const isAtend = !!acknowledged[p.id];
                     const sevCfg = p.sev ? SEV_CONFIG[p.sev] : SEV_CONFIG["bx"];
                     const isUTI = p.ala === "UTI";
-                    const havalColor =
-                      p.haval > 48
-                        ? "#c41e3a"
-                        : p.haval > 24
-                          ? "#d4931a"
-                          : "#3a9c6e";
+                    const havalNever = p.haval >= 999;
+                    const havalColor = havalNever ? "#c41e3a"
+                      : p.haval > 48 ? "#c41e3a"
+                      : p.haval > 24 ? "#d4931a"
+                      : "#3a9c6e";
 
                     const instTags = p.inst.slice(0, 3);
                     const instMore = p.inst.length > 3 ? p.inst.length - 3 : 0;
@@ -582,7 +590,7 @@ export function NutritionalDashboard() {
                           </span>
                           <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
                             <ClockCircleOutlined style={{ color: havalColor }} />
-                            <span style={{ color: havalColor }}>{p.haval}h s/ avaliação</span>
+                            <span style={{ color: havalColor }}>{havalNever ? "Sem avaliação" : `${p.haval}h s/ aval.`}</span>
                           </span>
                           {p.alergia && (
                             <InlineBadge
