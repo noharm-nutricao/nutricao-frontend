@@ -1,0 +1,29 @@
+name: Up to Date Check
+
+on:
+  push:
+    branches:
+      - feature/**
+
+jobs:
+  up-to-date:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Check if branch is up to date with develop
+      run: |
+        # Count commits in develop that are not in the current branch
+        BEHIND_COUNT=$(git rev-list --count HEAD..origin/develop)
+
+        if [ "$BEHIND_COUNT" -gt 0 ]; then
+          echo "❌ Branch is $BEHIND_COUNT commits behind develop"
+          echo "Please merge or rebase develop into your branch before pushing."
+          exit 1
+        else
+          echo "✅ Branch is up to date with develop"
+        fi
