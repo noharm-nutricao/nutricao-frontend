@@ -99,6 +99,13 @@ export const GLIM_ETIOL_LABEL: Record<string, string> = {
   doenca_cronica:   "Doença crônica",       // chave retornada pela API
 };
 
+export const INST_STYLE: Record<SeverityType, { bg: string; color: string; border: string }> = {
+  cr: { bg: "#fcebeb", color: "#a32d2d", border: "#f09595" },
+  al: { bg: "#fdf3dc", color: "#b7770d", border: "#fac775" },
+  md: { bg: "#f0eeff", color: "#3c3489", border: "#b39ddb" },
+  bx: { bg: "#f6ffed", color: "#389e0d", border: "#b7eb8f" },
+};
+
 // ── Fila predicates — single source of truth ────────────────────────────────
 // Used by both the Redux selectors and matchFila; change criteria in one place.
 
