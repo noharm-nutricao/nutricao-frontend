@@ -233,26 +233,32 @@ export function PatientModal({
 
   const handleAcknowledgeAlert = async (alertId: number) => {
     dispatch(markAlertAcknowledged({ patientId: p.id, alertId }));
-    try {
-      await dispatch(acknowledgeAlert({ patientId: p.id, alertId })).unwrap();
-    } catch {
+    const result = await dispatch(acknowledgeAlert({ patientId: p.id, alertId }));
+    if (acknowledgeAlert.rejected.match(result)) {
+      console.error("acknowledgeAlert rejected:", result.payload ?? result.error);
       dispatch(revertAlert({ patientId: p.id, alertId }));
       message.error("Erro ao reconhecer alerta.");
+    } else {
+      dispatch(fetchAlerts(p.id));
     }
   };
 
   const handleAcknowledgeAll = async () => {
     const activeAlerts = p.inst.filter((i) => !i.ack);
+    let failed = false;
     for (const alert of activeAlerts) {
       dispatch(markAlertAcknowledged({ patientId: p.id, alertId: alert.id }));
-      try {
-        await dispatch(acknowledgeAlert({ patientId: p.id, alertId: alert.id })).unwrap(); // eslint-disable-line no-await-in-loop
-      } catch {
+      // eslint-disable-next-line no-await-in-loop
+      const result = await dispatch(acknowledgeAlert({ patientId: p.id, alertId: alert.id }));
+      if (acknowledgeAlert.rejected.match(result)) {
+        console.error("acknowledgeAlert rejected:", result.payload ?? result.error);
         dispatch(revertAlert({ patientId: p.id, alertId: alert.id }));
         message.error("Erro ao reconhecer alertas.");
+        failed = true;
         break;
       }
     }
+    if (!failed) dispatch(fetchAlerts(p.id));
   };
 
   // ── Tab: Resumo ───────────────────────────────────────────────────────
