@@ -2,11 +2,13 @@ import { CheckCircleFilled } from "@ant-design/icons";
 import {
   NutritionalPatient,
   AcknowledgedEntry,
+  SeverityType,
 } from "../../NutritionalSlice";
 import { FeatureService } from "src/services/FeatureService";
 import Feature from "src/models/Feature";
 import {
   SEV_CONFIG,
+  INST_STYLE,
   calcMbcd,
   sevMNUTRIC,
   sevNRS,
@@ -23,11 +25,7 @@ interface PatientCardProps {
   onOpenTab: (tab: string) => void;
 }
 
-const INST_STYLE: Record<string, { bg: string; color: string; border: string }> = {
-  lab: { bg: "#fcebeb", color: "#a32d2d", border: "#f09595" },
-  clin: { bg: "#fdf3dc", color: "#b7770d", border: "#fac775" },
-  rx: { bg: "#f0eeff", color: "#3c3489", border: "#b39ddb" },
-};
+const SEV_ORDER: Record<SeverityType, number> = { cr: 3, al: 2, md: 1, bx: 0 };
 
 export function PatientCard({
   patient: p,
@@ -54,11 +52,18 @@ export function PatientCard({
           ? "#3a9c6e"
           : "#d4931a";
 
-  const instSlice = p.inst.slice(0, 3);
-  const instMore = p.inst.length > 3 ? p.inst.length - 3 : 0;
+  const activeInst = p.inst.filter((i) => !i.ack);
+  const instSlice = activeInst.slice(0, 3);
+  const instMore = activeInst.length > 3 ? activeInst.length - 3 : 0;
+  const maxInstSev: SeverityType | null = activeInst.length > 0
+    ? activeInst.reduce<SeverityType>(
+        (max, i) => SEV_ORDER[i.sev ?? "bx"] > SEV_ORDER[max] ? (i.sev ?? "bx") : max,
+        "bx"
+      )
+    : null;
 
   return (
-    <Card $sev={p.sev} $atend={isAtend}>
+    <Card $sev={maxInstSev ?? p.sev} $atend={isAtend}>
       <CardBody onClick={onClick}>
         <CardTop>
           <BedLabel>{p.leito}</BedLabel>
@@ -168,12 +173,14 @@ export function PatientCard({
         </GlimText>
 
         {/* Campo 3 – Instabilidade */}
-        {p.inst.length > 0 && (
+        {activeInst.length > 0 && (
           <>
-            <SectionLabel>Campo 3 – Instabilidade</SectionLabel>
+            <SectionLabel style={{ color: maxInstSev ? INST_STYLE[maxInstSev].color : undefined }}>
+              Campo 3 – Instabilidade
+            </SectionLabel>
             <TagsRow>
               {instSlice.map((item, i) => {
-                const st = INST_STYLE[item.t] ?? INST_STYLE.lab;
+                const st = INST_STYLE[item.sev] ?? INST_STYLE.md;
                 return (
                   <Tooltip key={i} title={item.d}>
                     <Badge $bg={st.bg} $color={st.color} $border={st.border}>

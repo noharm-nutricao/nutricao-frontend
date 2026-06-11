@@ -60,7 +60,7 @@ describe("isFila3", () => {
       inst: [
         { id: 1, t: "lab",  d: "A", ack: false, sev: "md" },
         { id: 2, t: "clin", d: "B", ack: false, sev: "bx" },
-        { id: 3, t: "rx",   d: "C", ack: false },
+        { id: 3, t: "rx",   d: "C", ack: false, sev: "md" as const },
       ],
     });
     expect(isFila3(p)).toBe(true);
@@ -69,10 +69,10 @@ describe("isFila3", () => {
   it("retorna true quando inst.length > 3", () => {
     const p = makePatient({
       inst: [
-        { id: 1, t: "lab", d: "A", ack: false },
-        { id: 2, t: "lab", d: "B", ack: false },
-        { id: 3, t: "lab", d: "C", ack: false },
-        { id: 4, t: "lab", d: "D", ack: false },
+        { id: 1, t: "lab", d: "A", ack: false, sev: "md" as const },
+        { id: 2, t: "lab", d: "B", ack: false, sev: "md" as const },
+        { id: 3, t: "lab", d: "C", ack: false, sev: "md" as const },
+        { id: 4, t: "lab", d: "D", ack: false, sev: "md" as const },
       ],
     });
     expect(isFila3(p)).toBe(true);
@@ -130,9 +130,9 @@ describe("selectFila3", () => {
     const p1 = makePatient({ id: 1, inst: [{ id: 1, t: "lab", d: "X", ack: false, sev: "cr" }] });
     const p2 = makePatient({ id: 2, inst: [] });
     const p3 = makePatient({ id: 3, inst: [
-      { id: 2, t: "lab",  d: "Y", ack: false },
-      { id: 3, t: "lab",  d: "Z", ack: false },
-      { id: 4, t: "clin", d: "W", ack: false },
+      { id: 2, t: "lab",  d: "Y", ack: false, sev: "md" as const },
+      { id: 3, t: "lab",  d: "Z", ack: false, sev: "md" as const },
+      { id: 4, t: "clin", d: "W", ack: false, sev: "md" as const },
     ]});
     expect(selectFila3(makeState([p1, p2, p3])).map((p) => p.id)).toEqual([1, 3]);
   });

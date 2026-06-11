@@ -11,7 +11,7 @@ export interface InstItem {
   t: "lab" | "clin" | "rx";
   d: string;
   ack: boolean;
-  sev?: SeverityType;
+  sev: SeverityType;
 }
 
 export interface HistEntry {
@@ -133,7 +133,7 @@ function normalizeApiPatient(raw: any): NutritionalPatient {
       t: i.t,
       d: i.d,
       ack: i.ack ?? false,
-      sev: i.sev ?? undefined,
+      sev: (i.sev ?? "md") as SeverityType,
     })),
     conduta: raw.conduta ?? "",
     alergia: raw.alergia ?? null,
@@ -197,7 +197,7 @@ export const fetchAlerts = createAsyncThunk(
       const raw: any[] = Array.isArray(response.data) ? response.data : response.data?.data ?? []; // eslint-disable-line @typescript-eslint/no-explicit-any
       return {
         patientId,
-        alerts: raw.map((i: any) => ({ id: i.id ?? 0, t: i.t, d: i.d, ack: i.ack ?? false })), // eslint-disable-line @typescript-eslint/no-explicit-any
+        alerts: raw.map((i: any) => ({ id: i.id ?? 0, t: i.t, d: i.d, ack: i.ack ?? false, sev: (i.sev ?? "md") as SeverityType })), // eslint-disable-line @typescript-eslint/no-explicit-any
       };
     } catch (err) {
       const axiosErr = err as AxiosError<{ error?: string; message?: string }>;
@@ -462,6 +462,7 @@ const nutritionalSlice = createSlice({
         if (patient) {
           patient.haval = 0;
           patient.conduta = conduta;
+          patient.d7 = false;
           const now = new Date();
           const dd = String(now.getDate()).padStart(2, "0");
           const mm = String(now.getMonth() + 1).padStart(2, "0");

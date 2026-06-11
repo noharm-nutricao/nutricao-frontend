@@ -49,9 +49,10 @@ import { InfoBlock, SectionTitle, ScorePanel, ScorePanelTitle, ScorePanelValue, 
 
 
 const INST_DOT_COLOR: Record<string, string> = {
-  lab: "#e24b4a",
-  clin: "#d4931a",
-  rx: "#7e57c2",
+  cr: "#a32d2d",
+  al: "#b7770d",
+  md: "#3c3489",
+  bx: "#8c8c8c",
 };
 
 const INST_TYPE_LABEL: Record<string, string> = {
@@ -150,8 +151,9 @@ export function PatientModal({
   const mnSev = p.mnutric != null ? sevMNUTRIC(p.mnutric) : null;
   const nrsSev = sevNRS(p.nrs);
 
-  const havalColor =
-    p.haval > 48 ? "#c41e3a" : p.haval > 24 ? "#d4931a" : "#3a9c6e";
+  const havalNever = p.haval >= 999;
+  const havalColor = havalNever ? "#c41e3a"
+    : p.haval > 48 ? "#c41e3a" : p.haval > 24 ? "#d4931a" : "#3a9c6e";
 
   // NRS real-time score
   const nrsPreview = nrsA + p.nrs_dims.doenca + (p.idade >= 70 ? 1 : 0);
@@ -189,25 +191,28 @@ export function PatientModal({
     );
   };
 
-  const handleSaveGlim = () => {
-    if (!glimCanSave) return;
-    dispatch(
-      saveGlimToServer({
-        id: p.id,
-        glim_fen: fenSelected,
-        glim_etiol: etiolSelected,
-        glim_diag: grad as GlimDiag,
-      })
-    );
-  };
+  const handleSaveGlim = async () => {
+  if (!glimCanSave) return;
+  const result = await dispatch(saveGlimToServer({ id: p.id, glim_fen: fenSelected, glim_etiol: etiolSelected, glim_diag: grad as GlimDiag }));
+  if (saveGlimToServer.fulfilled.match(result)) {
+    message.success("Diagnóstico GLIM salvo com sucesso.");
+  } else {
+    message.error(`Erro ao salvar GLIM: ${(result as any).payload ?? "erro desconhecido"}`);
+  }
+};
 
   const handleSaveNrs = () => {
     dispatch(saveNrsNut({ id: p.id, nut: nrsA }));
   };
 
-  const handleSaveAval = () => {
-    dispatch(saveAvalToServer({ id: p.id, conduta, freq, ing: ingestion }));
-  };
+  const handleSaveAval = async () => {
+  const result = await dispatch(saveAvalToServer({ id: p.id, conduta, freq, ing: ingestion }));
+  if (saveAvalToServer.fulfilled.match(result)) {
+    message.success("Avaliação registrada com sucesso.");
+  } else {
+    message.error(`Erro ao registrar avaliação: ${(result as any).payload ?? "erro desconhecido"}`);
+  }
+};
 
   const handleConfirmAllergy = () => {
     dispatch(confirmAllergy({ id: p.id }));
@@ -228,26 +233,32 @@ export function PatientModal({
 
   const handleAcknowledgeAlert = async (alertId: number) => {
     dispatch(markAlertAcknowledged({ patientId: p.id, alertId }));
-    try {
-      await dispatch(acknowledgeAlert({ patientId: p.id, alertId })).unwrap();
-    } catch {
+    const result = await dispatch(acknowledgeAlert({ patientId: p.id, alertId }));
+    if (acknowledgeAlert.rejected.match(result)) {
+      console.error("acknowledgeAlert rejected:", result.payload ?? result.error);
       dispatch(revertAlert({ patientId: p.id, alertId }));
       message.error("Erro ao reconhecer alerta.");
+    } else {
+      dispatch(fetchAlerts(p.id));
     }
   };
 
   const handleAcknowledgeAll = async () => {
     const activeAlerts = p.inst.filter((i) => !i.ack);
+    let failed = false;
     for (const alert of activeAlerts) {
       dispatch(markAlertAcknowledged({ patientId: p.id, alertId: alert.id }));
-      try {
-        await dispatch(acknowledgeAlert({ patientId: p.id, alertId: alert.id })).unwrap(); // eslint-disable-line no-await-in-loop
-      } catch {
+      // eslint-disable-next-line no-await-in-loop
+      const result = await dispatch(acknowledgeAlert({ patientId: p.id, alertId: alert.id }));
+      if (acknowledgeAlert.rejected.match(result)) {
+        console.error("acknowledgeAlert rejected:", result.payload ?? result.error);
         dispatch(revertAlert({ patientId: p.id, alertId: alert.id }));
         message.error("Erro ao reconhecer alertas.");
+        failed = true;
         break;
       }
     }
+    if (!failed) dispatch(fetchAlerts(p.id));
   };
 
   // ── Tab: Resumo ───────────────────────────────────────────────────────
@@ -459,7 +470,7 @@ export function PatientModal({
           <InstPanel style={{ marginBottom: 12 }}>
             {p.inst.map((item, i) => (
               <InstItemRow key={i}>
-                <InstDot $color={INST_DOT_COLOR[item.t] ?? "#8c8c8c"} />
+                <InstDot $color={INST_DOT_COLOR[item.sev] ?? "#8c8c8c"} />
                 <span>{item.d}</span>
                 <InstTypeLabel>{INST_TYPE_LABEL[item.t] ?? item.t}</InstTypeLabel>
               </InstItemRow>
@@ -488,7 +499,7 @@ export function PatientModal({
           <InfoBlock>
             <div className="info-label">Última avaliação</div>
             <div className="info-value" style={{ color: havalColor }}>
-              <ClockCircleOutlined /> {p.haval}h atrás
+              <ClockCircleOutlined /> {havalNever ? "Sem avaliação registrada" : `${p.haval}h atrás`}
             </div>
           </InfoBlock>
         </Col>
@@ -842,7 +853,7 @@ export function PatientModal({
           <InstPanel style={{ marginBottom: 16 }}>
             {activeLab.map((item) => (
               <InstItemRow key={item.id}>
-                <InstDot $color={INST_DOT_COLOR.lab} />
+                <InstDot $color={INST_DOT_COLOR[item.sev] ?? "#8c8c8c"} />
                 <span style={{ flex: 1 }}>{item.d}</span>
                 <InstTypeLabel>Laboratório</InstTypeLabel>
                 <Button
@@ -866,7 +877,7 @@ export function PatientModal({
           <InstPanel style={{ marginBottom: 16 }}>
             {activeClinRx.map((item) => (
               <InstItemRow key={item.id}>
-                <InstDot $color={INST_DOT_COLOR[item.t] ?? "#8c8c8c"} />
+                <InstDot $color={INST_DOT_COLOR[item.sev] ?? "#8c8c8c"} />
                 <span style={{ flex: 1 }}>{item.d}</span>
                 <InstTypeLabel>{INST_TYPE_LABEL[item.t] ?? item.t}</InstTypeLabel>
                 <Button
