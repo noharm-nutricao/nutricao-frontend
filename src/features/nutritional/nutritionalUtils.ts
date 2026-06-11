@@ -101,7 +101,16 @@ export function isFila1(p: Pick<NutritionalPatient, "sev" | "haval">): boolean {
   return (p.sev === "cr" || p.sev === "al") && p.haval > 18;
 }
 
-export function isFila2(p: Pick<NutritionalPatient, "haval">): boolean {
+export function isFila2(p: {
+  haval: number | null;
+  freq_horas: number | null;
+}): boolean {
+  if (p.haval === null || p.haval === 0) return false;
+
+  if (p.freq_horas != null) {
+    return p.haval >= p.freq_horas * 0.8;
+  }
+
   return p.haval >= 12 && p.haval <= 24;
 }
 

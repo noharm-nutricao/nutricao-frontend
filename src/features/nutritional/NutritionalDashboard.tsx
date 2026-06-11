@@ -113,18 +113,6 @@ export function NutritionalDashboard() {
     [patients, acknowledged]
   );
 
-  function matchFila(
-    p: NutritionalPatient,
-    filtFila: string,
-    _acknowledged: Record<number, AcknowledgedEntry>
-  ): boolean {
-    if (!filtFila || filtFila === "all") return true;
-    if (filtFila === "FILA1") return (p.sev === "cr" || p.sev === "al") && p.haval > 18;
-    if (filtFila === "FILA2") return isFila2Eligible(p);
-    if (filtFila === "FILA5") return p.d7 === true;
-    return true;
-  };
-
   const handleAcknowledge = (id: number) => {
     dispatch(
       acknowledgePatient({
