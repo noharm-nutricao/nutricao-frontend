@@ -99,6 +99,41 @@ export const GLIM_ETIOL_LABEL: Record<string, string> = {
   doenca_cronica:   "Doença crônica",       // chave retornada pela API
 };
 
+export const TRIAGEM_BADGE: Record<string, { color: string; bg: string; border: string; label: string }> = {
+  pendente:      { color: "#8c8c8c", bg: "#f5f5f5",  border: "#e0e0e0", label: "Triagem pendente" },
+  em_andamento:  { color: "#d4931a", bg: "#fffbf0",  border: "#fcd885", label: "Triagem em andamento" },
+  finalizada:    { color: "#3a9c6e", bg: "#f0faf5",  border: "#b7ebd1", label: "Triagem ok" },
+  atrasada:      { color: "#c41e3a", bg: "#fff1f0",  border: "#ffa8a8", label: "Triagem atrasada" },
+};
+
+export function formatTriagemTooltip(
+  data_internacao: string | null,
+  triagem_at: string | null,
+  triagem_status: string | null,
+): string {
+  const fmtDate = (iso: string | null): string => {
+    if (!iso) return "—";
+    const d = new Date(iso);
+    return d.toLocaleString("pt-BR", {
+      day: "2-digit", month: "2-digit", year: "numeric",
+      hour: "2-digit", minute: "2-digit",
+    });
+  };
+
+  const internacao = fmtDate(data_internacao);
+  const triagem = triagem_at ? fmtDate(triagem_at) : (triagem_status === "atrasada" ? "Não realizada" : "Pendente");
+
+  let horas = "";
+  if (data_internacao) {
+    const diffMs = (triagem_at ? new Date(triagem_at).getTime() : Date.now()) - new Date(data_internacao).getTime();
+    const h = Math.floor(diffMs / 3600000);
+    horas = `${h}h`;
+    if (triagem_status === "finalizada" && h <= 24) horas += " ✓";
+  }
+
+  return `Internação: ${internacao}\nTriagem: ${triagem}${horas ? `\nDecorridas: ${horas}` : ""}`;
+}
+
 export const INST_STYLE: Record<SeverityType, { bg: string; color: string; border: string }> = {
   cr: { bg: "#fcebeb", color: "#a32d2d", border: "#f09595" },
   al: { bg: "#fdf3dc", color: "#b7770d", border: "#fac775" },

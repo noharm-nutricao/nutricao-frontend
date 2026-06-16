@@ -157,3 +157,37 @@ export const ActionBtn = styled.button<{ $bg: string }>`
     opacity: 0.85;
   }
 `;
+
+export const TriagemBadge = styled.span<{ $bg: string; $color: string; $border: string }>`
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 9px;
+  font-weight: 600;
+  background: ${(p) => p.$bg};
+  color: ${(p) => p.$color};
+  border: 1px solid ${(p) => p.$border};
+  white-space: nowrap;
+  cursor: default;
+  transition: transform 0.15s;
+
+  &:hover {
+    transform: scale(1.05);
+  }
+`;
+
+export const TriagemDot = styled.span<{ $color: string; $pulse?: boolean }>`
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: ${(p) => p.$color};
+  flex-shrink: 0;
+  ${(p) => p.$pulse && `animation: triagemPulse 1.5s ease-in-out infinite;`}
+
+  @keyframes triagemPulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(1.4); }
+  }
+`;

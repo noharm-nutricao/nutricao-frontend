@@ -13,8 +13,10 @@ import {
   sevMNUTRIC,
   sevNRS,
   GLIM_LABEL,
+  TRIAGEM_BADGE,
+  formatTriagemTooltip,
 } from "../../nutritionalUtils";
-import { CardBody, CardTop, BedLabel, BadgeRow, PatientName, PatientMeta, SectionLabel, ScoreDual, ScoreChip, ScoreSingle, GlimText, TagsRow, CardFooter, ActionBtn, Badge, Card } from "./styles";
+import { CardBody, CardTop, BedLabel, BadgeRow, PatientName, PatientMeta, SectionLabel, ScoreDual, ScoreChip, ScoreSingle, GlimText, TagsRow, CardFooter, ActionBtn, Badge, Card, TriagemBadge, TriagemDot } from "./styles";
 import { Tooltip } from "antd";
 
 
@@ -155,6 +157,28 @@ export function PatientCard({
             <Badge $bg="#f0eeff" $color="#7e57c2" $border="#b39ddb">
               mNUTRIC
             </Badge>
+          </div>
+        )}
+
+        {/* Badge Triagem 24h — após scores, antes do GLIM */}
+        {p.triagem_status && TRIAGEM_BADGE[p.triagem_status] && (
+          <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 6, marginBottom: 2 }}>
+            <Tooltip
+              title={formatTriagemTooltip(p.data_internacao, p.triagem_at, p.triagem_status)}
+              overlayStyle={{ whiteSpace: "pre-line" }}
+            >
+              <TriagemBadge
+                $bg={TRIAGEM_BADGE[p.triagem_status].bg}
+                $color={TRIAGEM_BADGE[p.triagem_status].color}
+                $border={TRIAGEM_BADGE[p.triagem_status].border}
+              >
+                <TriagemDot
+                  $color={TRIAGEM_BADGE[p.triagem_status].color}
+                  $pulse={p.triagem_status === "atrasada"}
+                />
+                {TRIAGEM_BADGE[p.triagem_status].label}
+              </TriagemBadge>
+            </Tooltip>
           </div>
         )}
 

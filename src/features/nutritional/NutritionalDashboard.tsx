@@ -45,6 +45,8 @@ import {
   getPatientScore,
   scoreColorMnutric,
   scoreColorNrs,
+  TRIAGEM_BADGE,
+  formatTriagemTooltip,
 } from "./nutritionalUtils";
 import { SummaryBar, SummaryItem, SummaryRight, WardSection, WardHeader, WardLeft, WardDot, WardName, WardSub, BedGrid, EmptyBed, ListCard, ListCardBody, ListCell, ListCellLabel, InlineBadge, ListCardFooter } from "./styles";
 
@@ -127,6 +129,7 @@ export function NutritionalDashboard() {
       glimPendente: patients.filter((p: NutritionalPatient) => !p.glim_diag).length,
       d7: patients.filter((p: NutritionalPatient) => p.d7).length,
       desg: patients.filter((p: NutritionalPatient) => p.glim_diag === "grave").length,
+      triagemAtrasada: patients.filter((p: NutritionalPatient) => p.triagem_status === "atrasada").length,
       total: patients.length,
     }),
     [patients, acknowledged]
@@ -248,6 +251,7 @@ export function NutritionalDashboard() {
           { key: "glimPendente", label: "GLIM pendente", value: summary.glimPendente, color: "#7e57c2", sev: null },
           { key: "d7", label: "D7 pendente", value: summary.d7, color: "#7e57c2", sev: null },
           { key: "desg", label: "Desnut. grave", value: summary.desg, color: "#7f0d1f", sev: null },
+          { key: "triagemAtrasada", label: "Triagem atrasada", value: summary.triagemAtrasada, color: "#c41e3a", sev: null },
         ].map(({ key, label, value, color, sev }) => (
           <SummaryItem
             key={key}
@@ -465,6 +469,24 @@ export function NutritionalDashboard() {
                                     Score incompleto
                                   </span>
                                 )}
+                              </div>
+                            )}
+                            
+                            {/* Badge de triagem na lista */}
+                            {p.triagem_status && TRIAGEM_BADGE[p.triagem_status] && (
+                              <div style={{ marginTop: 4 }}>
+                                <Tooltip
+                                  title={formatTriagemTooltip(p.data_internacao, p.triagem_at, p.triagem_status)}
+                                  overlayStyle={{ whiteSpace: "pre-line" }}
+                                >
+                                  <InlineBadge
+                                    $bg={TRIAGEM_BADGE[p.triagem_status].bg}
+                                    $color={TRIAGEM_BADGE[p.triagem_status].color}
+                                    $border={TRIAGEM_BADGE[p.triagem_status].border}
+                                  >
+                                    ● {TRIAGEM_BADGE[p.triagem_status].label}
+                                  </InlineBadge>
+                                </Tooltip>
                               </div>
                             )}
                           </ListCell>

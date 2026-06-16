@@ -32,6 +32,9 @@ function makePatient(overrides: Partial<NutritionalPatient> = {}): NutritionalPa
     alergia: null,
     alOk: true,
     d7: false,
+    triagem_status: null,
+    triagem_at: null,
+    data_internacao: null,
     hist: [],
     ...overrides,
   };

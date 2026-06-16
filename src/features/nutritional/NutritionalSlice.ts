@@ -5,6 +5,7 @@ import api, { instance, setHeaders } from "services/api";
 export type AlaType = "UTI" | "B" | "C";
 export type SeverityType = "cr" | "al" | "md" | "bx";
 export type GlimDiag = "nd" | "mod" | "grave" | null;
+export type TriagemStatus = "pendente" | "em_andamento" | "finalizada" | "atrasada" | null;
 
 export interface InstItem {
   id: number;
@@ -58,6 +59,9 @@ export interface NutritionalPatient {
   d7: boolean;
   dados_incompletos?: boolean;
   nrs_completo?: boolean;
+  triagem_status: TriagemStatus;
+  triagem_at: string | null;        // ISO 8601
+  data_internacao: string | null;   // ISO 8601
   hist: HistEntry[];
 }
 
@@ -99,6 +103,7 @@ function normalizeAla(raw: string | null | undefined): AlaType {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function normalizeApiPatient(raw: any): NutritionalPatient {
   const c1 = raw.campo1 ?? {};
+  
   return {
     id: raw.id,
     leito: raw.leito ?? "—",
@@ -140,6 +145,9 @@ function normalizeApiPatient(raw: any): NutritionalPatient {
     // campo1 é a fonte canônica para flags de completude
     dados_incompletos: c1.dados_incompletos ?? raw.dados_incompletos ?? false,
     nrs_completo: c1.nrs_completo ?? raw.nrs_completo,
+    triagem_status: raw.triagem_status ?? null,
+    triagem_at: raw.triagem_at ?? null,
+    data_internacao: raw.data_internacao ?? null,
     hist: raw.hist ?? [],
   };
 }

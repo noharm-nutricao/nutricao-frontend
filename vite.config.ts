@@ -23,7 +23,7 @@ export default defineConfig({
     port: 3000,
      proxy: {
       "/api": {
-        target: "https://nf5vrtmgfieecoc3kewsih2yem0wclkd.lambda-url.us-east-2.on.aws",
+        target: "http://localhost:5000",
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, ""),
       },
