@@ -174,8 +174,10 @@ export function PatientModal({
       ? "Médio risco"
       : "Baixo risco";
 
-  const glimCanSave =
-    fenSelected.length >= 1 && etiolSelected.length >= 1 && !!grad;
+  const glimCanSaveNd = grad === "nd";
+  const glimCanSaveDiag =
+    fenSelected.length >= 1 && etiolSelected.length >= 1 && (grad === "mod" || grad === "grave");
+  const glimCanSave = glimCanSaveNd || glimCanSaveDiag;
 
   // ── Handlers ─────────────────────────────────────────────────────────
 
@@ -192,14 +194,18 @@ export function PatientModal({
   };
 
   const handleSaveGlim = async () => {
-  if (!glimCanSave) return;
-  const result = await dispatch(saveGlimToServer({ id: p.id, glim_fen: fenSelected, glim_etiol: etiolSelected, glim_diag: grad as GlimDiag }));
-  if (saveGlimToServer.fulfilled.match(result)) {
-    message.success("Diagnóstico GLIM salvo com sucesso.");
-  } else {
-    message.error(`Erro ao salvar GLIM: ${(result as any).payload ?? "erro desconhecido"}`);
-  }
-};
+    if (!glimCanSave) return;
+    const fen = grad === "nd" ? [] : fenSelected;
+    const etiol = grad === "nd" ? [] : etiolSelected;
+    const result = await dispatch(
+      saveGlimToServer({ id: p.id, glim_fen: fen, glim_etiol: etiol, glim_diag: grad as GlimDiag })
+    );
+    if (saveGlimToServer.fulfilled.match(result)) {
+      message.success("Diagnóstico GLIM salvo com sucesso.");
+    } else {
+      message.error(`Erro ao salvar GLIM: ${(result as any).payload ?? "erro desconhecido"}`);
+    }
+  };
 
   const handleSaveNrs = () => {
     dispatch(saveNrsNut({ id: p.id, nut: nrsA }));
@@ -441,7 +447,7 @@ export function PatientModal({
         </ChipsRow>
 
         <GlimDiagBadge $diag={p.glim_diag}>
-          {p.glim_diag !== null ? GLIM_LABEL[p.glim_diag] : "Pendente avaliação GLIM"}
+          {p.glim_diag !== null ? GLIM_LABEL[p.glim_diag] : "Não avaliado"}
         </GlimDiagBadge>
 
         {!p.glim_diag && (
@@ -622,49 +628,58 @@ export function PatientModal({
       />
 
       <div style={{ marginBottom: 16 }}>
-        <GlimSectionLabel>Critérios fenotípicos (selecione ao menos 1)</GlimSectionLabel>
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {(["perda_peso", "baixo_imc", "massa_muscular"] as const).map((key) => (
-            <Checkbox
-              key={key}
-              checked={fenSelected.includes(key)}
-              onChange={(e) => handleFenChange(key, e.target.checked)}
-            >
-              {GLIM_FEN_LABEL[key]}
-            </Checkbox>
-          ))}
-        </div>
+        <GlimSectionLabel>Resultado da avaliação GLIM</GlimSectionLabel>
+        <Radio.Group
+          value={grad || null}
+          onChange={(e) => {
+            setGrad(e.target.value);
+            if (e.target.value === "nd") {
+              setFenSelected([]);
+              setEtiolSelected([]);
+            }
+          }}
+          style={{ display: "flex", flexDirection: "column", gap: 8 }}
+        >
+          <Radio value="nd">Sem desnutrição pelos critérios GLIM</Radio>
+          <Radio value="mod">Desnutrição moderada</Radio>
+          <Radio value="grave">Desnutrição grave</Radio>
+        </Radio.Group>
       </div>
 
-      <Divider style={{ margin: "12px 0" }} />
-
-      <div style={{ marginBottom: 16 }}>
-        <GlimSectionLabel>Critérios etiológicos (selecione ao menos 1)</GlimSectionLabel>
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {(["reducao_ingestao", "doenca_inflamacao"] as const).map((key) => (
-            <Checkbox
-              key={key}
-              checked={etiolSelected.includes(key)}
-              onChange={(e) => handleEtiolChange(key, e.target.checked)}
-            >
-              {GLIM_ETIOL_LABEL[key]}
-            </Checkbox>
-          ))}
-        </div>
-      </div>
-
-      {fenSelected.length >= 1 && etiolSelected.length >= 1 && (
+      {(grad === "mod" || grad === "grave") && (
         <>
           <Divider style={{ margin: "12px 0" }} />
+
           <div style={{ marginBottom: 16 }}>
-            <GlimSectionLabel>Graduação da desnutrição</GlimSectionLabel>
-            <Radio.Group
-              value={grad}
-              onChange={(e) => setGrad(e.target.value)}
-            >
-              <Radio value="mod">Desnutrição moderada</Radio>
-              <Radio value="grave">Desnutrição grave</Radio>
-            </Radio.Group>
+            <GlimSectionLabel>Critérios fenotípicos (selecione ao menos 1)</GlimSectionLabel>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {(["perda_peso", "baixo_imc", "massa_muscular"] as const).map((key) => (
+                <Checkbox
+                  key={key}
+                  checked={fenSelected.includes(key)}
+                  onChange={(e) => handleFenChange(key, e.target.checked)}
+                >
+                  {GLIM_FEN_LABEL[key]}
+                </Checkbox>
+              ))}
+            </div>
+          </div>
+
+          <Divider style={{ margin: "12px 0" }} />
+
+          <div style={{ marginBottom: 16 }}>
+            <GlimSectionLabel>Critérios etiológicos (selecione ao menos 1)</GlimSectionLabel>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {(["reducao_ingestao", "doenca_inflamacao"] as const).map((key) => (
+                <Checkbox
+                  key={key}
+                  checked={etiolSelected.includes(key)}
+                  onChange={(e) => handleEtiolChange(key, e.target.checked)}
+                >
+                  {GLIM_ETIOL_LABEL[key]}
+                </Checkbox>
+              ))}
+            </div>
           </div>
         </>
       )}
