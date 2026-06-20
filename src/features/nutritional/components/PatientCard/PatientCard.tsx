@@ -27,6 +27,13 @@ interface PatientCardProps {
 
 const SEV_ORDER: Record<SeverityType, number> = { cr: 3, al: 2, md: 1, bx: 0 };
 
+const TRIAGEM_BADGE: Record<string, { color: string; label: string }> = {
+  pendente:     { color: "#8c8c8c", label: "Triagem pendente" },
+  em_andamento: { color: "#d4931a", label: "Triagem em andamento" },
+  finalizada:   { color: "#3a9c6e", label: "Triagem ok" },
+  atrasada:     { color: "#c41e3a", label: "Triagem atrasada" },
+};
+
 export function PatientCard({
   patient: p,
   acknowledged,
@@ -159,6 +166,30 @@ export function PatientCard({
         )}
 
         {/* Campo 2 – Diagnóstico GLIM */}
+        {/* Triagem badge (status comes from backend; frontend only displays) */}
+        {(() => {
+          const triState = p.triagem_status ?? null;
+          const triBadge = triState ? (TRIAGEM_BADGE[triState] ?? { color: "#8c8c8c", label: String(triState) }) : { color: "#8c8c8c", label: "Sem triagem" };
+          const fmt = (iso?: string | null) => (iso ? new Date(iso).toLocaleString() : "—");
+          const hoursElapsed = () => {
+            if (!p.data_internacao) return "—";
+            const start = new Date(p.data_internacao);
+            const end = p.triagem_at ? new Date(p.triagem_at) : new Date();
+            const diff = Math.max(0, end.getTime() - start.getTime());
+            const hrs = Math.floor(diff / (1000 * 60 * 60));
+            return `${hrs}h`;
+          };
+          return (
+            <TagsRow>
+              <Tooltip title={`Internação: ${fmt(p.data_internacao)}\nTriagem: ${p.triagem_at ? fmt(p.triagem_at) : "—"}\n${hoursElapsed()} decorridas`}>
+                <Badge $bg="#ffffff" $color={triBadge.color} $border={triBadge.color}>
+                  {triBadge.label}
+                </Badge>
+              </Tooltip>
+            </TagsRow>
+          );
+        })()}
+
         <SectionLabel>Campo 2 – GLIM</SectionLabel>
         <GlimText $color={glimColor}>
           {p.glim_diag !== null ? GLIM_LABEL[p.glim_diag] : "Pendente avaliação"}

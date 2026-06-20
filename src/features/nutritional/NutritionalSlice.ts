@@ -58,6 +58,10 @@ export interface NutritionalPatient {
   d7: boolean;
   dados_incompletos?: boolean;
   nrs_completo?: boolean;
+  // Triagem fields from backend
+  triagem_status: "pendente" | "em_andamento" | "finalizada" | "atrasada" | null;
+  triagem_at: string | null;        // ISO 8601
+  data_internacao: string | null;   // ISO 8601
   hist: HistEntry[];
 }
 
@@ -140,6 +144,10 @@ function normalizeApiPatient(raw: any): NutritionalPatient {
     // campo1 é a fonte canônica para flags de completude
     dados_incompletos: c1.dados_incompletos ?? raw.dados_incompletos ?? false,
     nrs_completo: c1.nrs_completo ?? raw.nrs_completo,
+    // triagem fields (backend is source of truth; allow missing values)
+    triagem_status: raw.triagem_status ?? null,
+    triagem_at: raw.triagem_at ?? null,
+    data_internacao: raw.data_internacao ?? null,
     hist: raw.hist ?? [],
   };
 }
