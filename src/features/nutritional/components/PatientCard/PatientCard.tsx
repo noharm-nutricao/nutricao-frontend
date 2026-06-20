@@ -180,13 +180,23 @@ export function PatientCard({
             return `${hrs}h`;
           };
           return (
-            <TagsRow>
-              <Tooltip title={`Internação: ${fmt(p.data_internacao)}\nTriagem: ${p.triagem_at ? fmt(p.triagem_at) : "—"}\n${hoursElapsed()} decorridas`}>
-                <Badge $bg="#ffffff" $color={triBadge.color} $border={triBadge.color}>
-                  {triBadge.label}
-                </Badge>
-              </Tooltip>
-            </TagsRow>
+            <>
+              <TagsRow>
+                <Tooltip title={`Internação: ${fmt(p.data_internacao)}\nTriagem: ${p.triagem_at ? fmt(p.triagem_at) : "—"}\n${hoursElapsed()} decorridas`}>
+                  <Badge $bg="#ffffff" $color={triBadge.color} $border={triBadge.color}>
+                    {triBadge.label}
+                  </Badge>
+                </Tooltip>
+              </TagsRow>
+
+              {p.freq_horas != null && (
+                <TagsRow>
+                  <Badge $bg="#ffffff" $color="#595959" $border="#e0e0e0">
+                    {`Visita: ${p.freq_horas}h`}
+                  </Badge>
+                </TagsRow>
+              )}
+            </>
           );
         })()}
 

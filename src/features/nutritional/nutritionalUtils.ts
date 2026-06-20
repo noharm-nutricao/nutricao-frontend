@@ -113,7 +113,12 @@ export function isFila1(p: Pick<NutritionalPatient, "sev" | "haval">): boolean {
   return (p.sev === "cr" || p.sev === "al") && p.haval > 18;
 }
 
-export function isFila2(p: Pick<NutritionalPatient, "haval">): boolean {
+export function isFila2(p: Pick<NutritionalPatient, "haval" | "freq_horas">): boolean {
+  if (p.haval === null || p.haval === 0) return false;
+  if ((p as any).freq_horas != null) {
+    return p.haval >= (p as any).freq_horas * 0.8;
+  }
+  // fallback: janela fixa 12-24h
   return p.haval >= 12 && p.haval <= 24;
 }
 
