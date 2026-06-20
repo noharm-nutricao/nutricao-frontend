@@ -811,6 +811,11 @@ export function PatientModal({
               </div>
             </HistEntry>
           ))}
+
+          {/* Frequency from last assessment (most recent) */}
+          <div style={{ marginTop: 8, fontSize: 12, color: "#595959" }}>
+            <strong>Frequência última avaliação:</strong> {p.hist[0]?.freq ?? "—"}
+          </div>
         </>
       )}
     </div>

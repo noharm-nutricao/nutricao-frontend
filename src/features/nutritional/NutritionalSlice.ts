@@ -48,6 +48,7 @@ export interface NutritionalPatient {
   peso: string;
   imc: number | null;
   haval: number;
+  freq_horas: number | null;
   glim_diag: GlimDiag;
   glim_fen: string[];
   glim_etiol: string[];
@@ -127,6 +128,7 @@ function normalizeApiPatient(raw: any): NutritionalPatient {
     imc: raw.imc ?? null,
     // Acompanhamento
     haval: raw.haval ?? 999,
+    freq_horas: raw.freq_horas ?? null,
     glim_diag: raw.glim_diag ?? null,
     glim_fen: (raw.glim_fen ?? []).map((k: string) => FEN_FROM_BACKEND[k] ?? k),
     glim_etiol: (raw.glim_etiol ?? []).map((k: string) => ETIOL_FROM_BACKEND[k] ?? k),
