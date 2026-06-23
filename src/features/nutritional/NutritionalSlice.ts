@@ -11,6 +11,7 @@ export interface InstItem {
   t: "lab" | "clin" | "rx";
   d: string;
   ack: boolean;
+  sev: SeverityType;
 }
 
 export interface HistEntry {
@@ -47,6 +48,7 @@ export interface NutritionalPatient {
   peso: string;
   imc: number | null;
   haval: number;
+  freq_horas: number | null;
   glim_diag: GlimDiag;
   glim_fen: string[];
   glim_etiol: string[];
@@ -57,6 +59,10 @@ export interface NutritionalPatient {
   d7: boolean;
   dados_incompletos?: boolean;
   nrs_completo?: boolean;
+  // Triagem fields from backend
+  triagem_status: "pendente" | "em_andamento" | "finalizada" | "atrasada" | null;
+  triagem_at: string | null;        // ISO 8601
+  data_internacao: string | null;   // ISO 8601
   hist: HistEntry[];
 }
 
@@ -141,6 +147,7 @@ function normalizeApiPatient(raw: any): NutritionalPatient {
     peso: raw.peso != null ? `${raw.peso} kg` : "",
     imc: raw.imc ?? null,
     haval: raw.haval ?? 999,
+    freq_horas: raw.freq_horas ?? null,
     glim_diag: raw.glim_diag ?? null,
     glim_fen: (raw.glim_fen ?? []).map((k: string) => FEN_FROM_BACKEND[k] ?? k),
     glim_etiol: (raw.glim_etiol ?? []).map((k: string) => ETIOL_FROM_BACKEND[k] ?? k),
@@ -156,6 +163,10 @@ function normalizeApiPatient(raw: any): NutritionalPatient {
     d7: raw.d7 ?? false,
     dados_incompletos: c1.dados_incompletos ?? raw.dados_incompletos ?? false,
     nrs_completo: c1.nrs_completo ?? raw.nrs_completo,
+    // triagem fields (backend is source of truth; allow missing values)
+    triagem_status: raw.triagem_status ?? null,
+    triagem_at: raw.triagem_at ?? null,
+    data_internacao: raw.data_internacao ?? null,
     hist: raw.hist ?? [],
   };
 }
@@ -211,7 +222,7 @@ export const fetchAlerts = createAsyncThunk(
       const raw: any[] = Array.isArray(response.data) ? response.data : response.data?.data ?? []; // eslint-disable-line @typescript-eslint/no-explicit-any
       return {
         patientId,
-        alerts: raw.map((i: any) => ({ id: i.id ?? 0, t: i.t, d: i.d, ack: i.ack ?? false })), // eslint-disable-line @typescript-eslint/no-explicit-any
+        alerts: raw.map((i: any) => ({ id: i.id ?? 0, t: i.t, d: i.d, ack: i.ack ?? false, sev: (i.sev ?? "md") as SeverityType })), // eslint-disable-line @typescript-eslint/no-explicit-any
       };
     } catch (err) {
       const axiosErr = err as AxiosError<{ error?: string; message?: string }>;
@@ -482,6 +493,7 @@ const nutritionalSlice = createSlice({
         if (patient) {
           patient.haval = 0;
           patient.conduta = conduta;
+          patient.d7 = false;
           const now = new Date();
           const dd = String(now.getDate()).padStart(2, "0");
           const mm = String(now.getMonth() + 1).padStart(2, "0");

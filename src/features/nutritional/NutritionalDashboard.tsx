@@ -7,16 +7,18 @@ import {
   Segmented,
   Spin,
   Tooltip,
+  message,
 } from "antd";
 import {
   AppstoreOutlined,
   UnorderedListOutlined,
   CheckCircleOutlined,
   ClockCircleOutlined,
+  CalculatorOutlined,
 } from "@ant-design/icons";
 
 import { useAppDispatch, useAppSelector } from "src/store";
-import { selectFila1, selectFila2, selectFila5 } from "src/store/selectors/nutritionalSelectors";
+import { selectFila1, selectFila2, selectFila3, selectFila4, selectFila5 } from "src/store/selectors/nutritionalSelectors";
 import { FeatureService } from "src/services/FeatureService";
 import Feature from "src/models/Feature";
 import { PageHeader } from "src/styles/PageHeader.style";
@@ -32,6 +34,7 @@ import {
 import { NutritionalFilter } from "./components/NutritionalFIlter/NutritionalFilter";
 import { PatientCard } from "./components/PatientCard/PatientCard";
 import { PatientModal } from "./components/PatientModal/PatientModal";
+import { ChumleaCalculator } from "./components/ChumleaCalculator/ChumleaCalculator";
 import {
   REFRESH_INTERVAL,
   SEV_CONFIG,
@@ -50,12 +53,14 @@ export function NutritionalDashboard() {
 
   const dispatch = useAppDispatch();
 
-  const filtFila = useAppSelector((state: any) => state.nutritional.filtFila as string);
+  const filtFila = useAppSelector((state) => state.nutritional.filtFila);
   const fila1Patients = useAppSelector(selectFila1);
   const fila2Patients = useAppSelector(selectFila2);
+  const fila3Patients = useAppSelector(selectFila3);
+  const fila4Patients = useAppSelector(selectFila4);
   const fila5Patients = useAppSelector(selectFila5);
   const { patients, acknowledged, loading, error } = useAppSelector(
-    (state: any) => state.nutritional
+    (state) => state.nutritional
   );
 
   const [viewMode, setViewMode] = useState<"grid" | "lista">("grid");
@@ -63,7 +68,12 @@ export function NutritionalDashboard() {
   const [filtSev, setFiltSev] = useState("");
   const [sortAsc, setSortAsc] = useState(false);
   const [modalTab, setModalTab] = useState("vis");
-  const [modalPatient, setModalPatient] = useState<NutritionalPatient | null>(null);
+  const [filtAlergia, setFiltAlergia] = useState<"" | "com" | "pendente">("");
+  const [modalPatientId, setModalPatientId] = useState<number | null>(null);
+  const modalPatient = modalPatientId !== null
+    ? (patients.find((p: NutritionalPatient) => p.id === modalPatientId) ?? null)
+    : null;
+  const [showChumlea, setShowChumlea] = useState(false);
 
 
   // ── Auto-fetch + 15-min refresh ─────────────────────────────────────────
@@ -73,7 +83,16 @@ export function NutritionalDashboard() {
     return () => clearInterval(interval);
   }, [dispatch]);
 
+  // ── Close modal gracefully if patient removed from polling ──────────────
+  useEffect(() => {
+    if (modalPatientId !== null && modalPatient === null) {
+      message.warning("Paciente não encontrado — pode ter recebido alta ou sido transferido.");
+      setModalPatientId(null);
+    }
+  }, [modalPatient, modalPatientId]);
+
   // ── Filtered + sorted list ──────────────────────────────────────────────
+  // matchFila is a pure module-level function — no closure, not a dep.
   const filtered = useMemo(() => {
     let list: NutritionalPatient[] = [...patients];
     if (filtAla !== "all" && filtAla !== "") {
@@ -81,6 +100,12 @@ export function NutritionalDashboard() {
     }
     if (filtSev && filtSev !== "all") {
       list = list.filter((p) => p.sev === filtSev);
+    }
+    if (filtAlergia === "com") {
+      list = list.filter((p) => p.alergia !== null);
+    }
+    if (filtAlergia === "pendente") {
+      list = list.filter((p) => p.alergia !== null && !p.alOk);
     }
     if (filtFila) {
       list = list.filter((p) => matchFila(p, filtFila, acknowledged));
@@ -90,7 +115,7 @@ export function NutritionalDashboard() {
         ? getPatientScore(a) - getPatientScore(b)
         : getPatientScore(b) - getPatientScore(a)
     );
-  }, [patients, filtAla, filtSev, filtFila, sortAsc, acknowledged]);
+  }, [patients, filtAla, filtSev, filtFila, filtAlergia, sortAsc, acknowledged]);
 
   // ── Summary counts ──────────────────────────────────────────────────────
   const summary = useMemo(
@@ -107,6 +132,11 @@ export function NutritionalDashboard() {
     [patients, acknowledged]
   );
 
+  const countsAlergia = useMemo(() => ({
+    com: patients.filter((p: NutritionalPatient) => p.alergia !== null).length,
+    pendente: patients.filter((p: NutritionalPatient) => p.alergia !== null && !p.alOk).length,
+  }), [patients]);
+
   function matchFila(
     p: NutritionalPatient,
     filtFila: string,
@@ -114,7 +144,17 @@ export function NutritionalDashboard() {
   ): boolean {
     if (!filtFila || filtFila === "all") return true;
     if (filtFila === "FILA1") return (p.sev === "cr" || p.sev === "al") && p.haval > 18;
-    if (filtFila === "FILA2") return p.haval >= 12 && p.haval <= 24;
+    if (filtFila === "FILA2") {
+      if (p.haval === null || p.haval === 0) return false;
+      // freq_horas = 48, haval = 40 (>= 48*0.8=38.4) → Fila 2 inclui
+      // freq_horas = 48, haval = 30 (< 38.4) → Fila 2 exclui
+      // freq_horas = null, haval = 15 → fallback inclui (12–24h)
+      // freq_horas = null, haval = 30 → fallback exclui
+      if ((p as any).freq_horas != null) {
+        return p.haval >= (p as any).freq_horas * 0.8;
+      }
+      return p.haval >= 12 && p.haval <= 24;
+    }
     if (filtFila === "FILA5") return p.d7 === true;
     return true;
   };
@@ -133,7 +173,7 @@ export function NutritionalDashboard() {
   };
 
   const handleOpenTab = (patient: NutritionalPatient, tab: string) => {
-    setModalPatient(patient);
+    setModalPatientId(patient.id);
     setModalTab(tab);
   };
 
@@ -161,6 +201,12 @@ export function NutritionalDashboard() {
           </span>
         </div>
         <div className="page-header-actions">
+          <Button
+            icon={<CalculatorOutlined />}
+            onClick={() => setShowChumlea(true)}
+          >
+            Chumlea
+          </Button>
           <Segmented
             value={viewMode}
             onChange={(v) => setViewMode(v as "grid" | "lista")}
@@ -184,15 +230,20 @@ export function NutritionalDashboard() {
       <NutritionalFilter
         filtAla={filtAla}
         filtSev={filtSev}
+        filtAlergia={filtAlergia}
+        countsAlergia={countsAlergia}
         filtFila={filtFila}
         countsFila={{
           FILA1: fila1Patients.length,
           FILA2: fila2Patients.length,
+          FILA3: fila3Patients.length,
+          FILA4: fila4Patients.length,
           FILA5: fila5Patients.length,
         }}
         sortAsc={sortAsc}
         onAlaChange={setFiltAla}
         onSevChange={setFiltSev}
+        onAlergiaChange={setFiltAlergia}
         onFilaChange={(val) => dispatch(setFiltFilaAction(val))}
         onSortToggle={() => setSortAsc((v) => !v)}
       />
@@ -334,12 +385,11 @@ export function NutritionalDashboard() {
                     const isAtend = !!acknowledged[p.id];
                     const sevCfg = p.sev ? SEV_CONFIG[p.sev] : SEV_CONFIG["bx"];
                     const isUTI = p.ala === "UTI";
-                    const havalColor =
-                      p.haval > 48
-                        ? "#c41e3a"
-                        : p.haval > 24
-                          ? "#d4931a"
-                          : "#3a9c6e";
+                    const havalNever = p.haval >= 999;
+                    const havalColor = havalNever ? "#c41e3a"
+                      : p.haval > 48 ? "#c41e3a"
+                      : p.haval > 24 ? "#d4931a"
+                      : "#3a9c6e";
 
                     const instTags = p.inst.slice(0, 3);
                     const instMore = p.inst.length > 3 ? p.inst.length - 3 : 0;
@@ -550,7 +600,7 @@ export function NutritionalDashboard() {
                           </span>
                           <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
                             <ClockCircleOutlined style={{ color: havalColor }} />
-                            <span style={{ color: havalColor }}>{p.haval}h s/ avaliação</span>
+                            <span style={{ color: havalColor }}>{havalNever ? "Sem avaliação" : `${p.haval}h s/ aval.`}</span>
                           </span>
                           {p.alergia && (
                             <InlineBadge
@@ -579,13 +629,19 @@ export function NutritionalDashboard() {
         </div>
       )}
 
+      {/* Chumlea calculator modal */}
+      <ChumleaCalculator
+        open={showChumlea}
+        onClose={() => setShowChumlea(false)}
+      />
+
       {/* Patient detail modal */}
       <PatientModal
         patient={modalPatient}
         acknowledged={acknowledged}
         activeTab={modalTab}
         onTabChange={setModalTab}
-        onClose={() => setModalPatient(null)}
+        onClose={() => setModalPatientId(null)}
       />
     </>
   );
