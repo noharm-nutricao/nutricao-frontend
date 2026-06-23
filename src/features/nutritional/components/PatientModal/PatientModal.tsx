@@ -33,8 +33,6 @@ import {
   acknowledgeAlert,
   saveGlimToServer,
   saveAvalToServer,
-  fetchLlmSummary,
-  clearLlmSummary,
 } from "../../NutritionalSlice";
 import { MnutricManualForm } from "../MnutricManualForm/MnutricManualForm";
 import {
@@ -98,20 +96,6 @@ export function PatientModal({
     (state: any) => (state.nutritional.alertsLoading as Record<number, boolean>)[p?.id ?? -1] ?? false // eslint-disable-line @typescript-eslint/no-explicit-any
   );
 
-  const llmSummary = useAppSelector((state: any) =>
-    p ? state.nutritional.llmSummaries[p.id] : undefined
-  );
-
-  const formatLlmGeneratedAt = (raw: string) => {
-    const date = new Date(raw);
-    if (Number.isNaN(date.getTime())) return raw;
-    const day = String(date.getDate()).padStart(2, "0");
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const hours = String(date.getHours()).padStart(2, "0");
-    const minutes = String(date.getMinutes()).padStart(2, "0");
-    return `${day}/${month} ${hours}:${minutes}`;
-  };
-
   // ── NRS tab local state ───────────────────────────────────────────────
   const [nrsA, setNrsA] = useState(0);
 
@@ -129,8 +113,8 @@ export function PatientModal({
   const [prot, setProt] = useState<number | null>(null);
 
   // ── Inst tab local state ──────────────────────────────────────────────
-  const [antecipar, setAntecipar] = useState<string>("");
   const [instObs, setInstObs] = useState("");
+  const [antecipar, setAntecipar] = useState<string>("");
 
   // ── Initialize from patient ───────────────────────────────────────────
   useEffect(() => {
@@ -145,6 +129,7 @@ export function PatientModal({
     setIngestion(50);
     setKcal(null);
     setProt(null);
+    setInstObs("");
     setAntecipar("");
   }, [p?.id]);
 
@@ -280,17 +265,6 @@ export function PatientModal({
       }
     }
     if (!failed) dispatch(fetchAlerts(p.id));
-  };
-
-  const handleGenerateLlmSummary = () => {
-    if (!p) return;
-    dispatch(fetchLlmSummary(p.id));
-  };
-
-  const handleRegenerateLlmSummary = () => {
-    if (!p) return;
-    dispatch(clearLlmSummary(p.id));
-    dispatch(fetchLlmSummary(p.id));
   };
 
   // ── Tab: Resumo ───────────────────────────────────────────────────────
@@ -510,53 +484,6 @@ export function PatientModal({
           </InstPanel>
         </>
       )}
-
-      <Divider style={{ margin: "8px 0" }} />
-
-      <SectionTitle>Resumo Clínico IA</SectionTitle>
-      <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 12, marginBottom: 12 }}>
-        <Button
-          type="primary"
-          onClick={llmSummary?.summary ? handleRegenerateLlmSummary : handleGenerateLlmSummary}
-          loading={llmSummary?.loading}
-          style={{ background: "#7e57c2", borderColor: "#7e57c2" }}
-        >
-          {llmSummary?.loading
-            ? "Gerando resumo..."
-            : llmSummary?.summary
-            ? "Regenerar"
-            : "Gerar resumo"}
-        </Button>
-        {llmSummary?.loading && (
-          <span style={{ color: "#595959", fontSize: 12 }}>Gerando resumo...</span>
-        )}
-      </div>
-      {llmSummary?.error && (
-        <Alert type="error" message={llmSummary.error} showIcon style={{ marginBottom: 12 }} />
-      )}
-      {llmSummary?.summary && (
-        <>
-          <div
-            style={{
-              border: "1px solid #e8e8e8",
-              borderRadius: 8,
-              padding: 14,
-              background: "#fafafa",
-              whiteSpace: "pre-wrap",
-              lineHeight: 1.6,
-              color: "#2e3c5a",
-            }}
-          >
-            {llmSummary.summary}
-          </div>
-          <div style={{ fontSize: 11, color: "#8c8c8c", marginTop: 8 }}>
-            Gerado em {formatLlmGeneratedAt(llmSummary.generated_at)} · suporte à decisão
-          </div>
-        </>
-      )}
-      <div style={{ fontSize: 11, color: "#8c8c8c", marginTop: 12 }}>
-        Gerado por IA — suporte à decisão clínica, não substitui avaliação profissional
-      </div>
 
       <Divider style={{ margin: "8px 0" }} />
 
@@ -902,28 +829,35 @@ export function PatientModal({
 
   const tabInst = (
     <div>
-      {/* Banner amarelo - alergia não confirmada */}
       {p.alergia && !p.alOk && (
-        <div
-          style={{
-            background: "#fffbe6",
-            border: "1px solid #ffe58f",
-            borderRadius: 6,
-            padding: "10px 14px",
-            marginBottom: 16,
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-          }}
-        >
-          <WarningOutlined style={{ color: "#d48806", fontSize: 16 }} />
-          <span style={{ flex: 1, fontSize: 12, color: "#614700" }}>
-            Alergia não confirmada: <strong>{p.alergia}</strong>
-          </span>
-          <Button size="small" type="primary" danger onClick={handleConfirmAllergy}>
-            Confirmar ciência
-          </Button>
-        </div>
+        <Alert
+          type="warning"
+          showIcon
+          icon={<WarningOutlined />}
+          message={`Alergia registrada: ${p.alergia}`}
+          description="É necessário confirmar ciência da alergia antes de prosseguir."
+          action={
+            <Button
+              size="small"
+              type="primary"
+              danger
+              onClick={handleConfirmAllergy}
+            >
+              Confirmar ciência
+            </Button>
+          }
+          style={{ marginBottom: 16 }}
+        />
+      )}
+
+      {p.alergia && p.alOk && (
+        <Alert
+          type="success"
+          showIcon
+          icon={<CheckCircleOutlined />}
+          message={`Alergia confirmada: ${p.alergia}`}
+          style={{ marginBottom: 16 }}
+        />
       )}
 
       {activeLab.length > 0 && (
@@ -1006,6 +940,22 @@ export function PatientModal({
           rows={3}
           placeholder="Observações sobre instabilidade nutricional..."
         />
+      </div>
+
+      <div style={{ marginBottom: 16 }}>
+        <div style={{ fontSize: 12, fontWeight: 600, color: "#595959", marginBottom: 6 }}>
+          Antecipar reavaliação?
+        </div>
+        <Radio.Group
+          value={antecipar}
+          onChange={(e) => {
+            setAntecipar(e.target.value);
+            if (e.target.value === "sim") onTabChange("aval");
+          }}
+        >
+          <Radio value="sim">Sim – antecipar</Radio>
+          <Radio value="nao">Não – manter programação</Radio>
+        </Radio.Group>
       </div>
     </div>
   );
