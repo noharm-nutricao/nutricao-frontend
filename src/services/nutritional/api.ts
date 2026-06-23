@@ -9,6 +9,7 @@ interface NutritionalAPI {
   acknowledgePatient: (nratendimento: number) => any;
   getAlerts: (nratendimento: number) => any;
   acknowledgeAlert: (nratendimento: number, alertId: number) => any;
+  getLlmSummary: (nratendimento: number) => any;
 };
 
 
@@ -122,6 +123,18 @@ api.nutritional.getAlerts = (nratendimento: number) =>
 api.nutritional.acknowledgeAlert = (nratendimento: number, alertId: number) =>
   instance.post(
     `/nutritional/patients/${nratendimento}/alerts/${alertId}/acknowledge`,
+    {},
+    setHeaders(),
+  );
+
+/**
+ * Generates a clinical summary via LLM for the patient.
+ * @param nratendimento - Patient admission number
+ * @returns Promise with { summary, generated_at }
+ */
+api.nutritional.getLlmSummary = (nratendimento: number) =>
+  instance.post(
+    `/nutritional/patients/${nratendimento}/llm-summary`,
     {},
     setHeaders(),
   );
