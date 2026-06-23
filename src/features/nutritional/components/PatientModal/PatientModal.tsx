@@ -26,7 +26,7 @@ import {
   GlimDiag,
   saveNrsNut,
   confirmAllergy,
-  acknowledgePatient,
+  acknowledgePatientToServer,
   markAlertAcknowledged,
   revertAlert,
   fetchAlerts,
@@ -94,6 +94,10 @@ export function PatientModal({
   const alertsLoading = useAppSelector(
     (state: any) => (state.nutritional.alertsLoading as Record<number, boolean>)[p?.id ?? -1] ?? false // eslint-disable-line @typescript-eslint/no-explicit-any
   );
+  const acknowledgeLoading = useAppSelector(
+    (state: any) => (state.nutritional.acknowledgeLoading as Record<number, boolean>)[p?.id ?? -1] ?? false // eslint-disable-line @typescript-eslint/no-explicit-any
+  );
+  const userName = useAppSelector((state: any) => state.user.account.userName); // eslint-disable-line @typescript-eslint/no-explicit-any
 
   // ── NRS tab local state ───────────────────────────────────────────────
   const [nrsA, setNrsA] = useState(0);
@@ -206,24 +210,18 @@ export function PatientModal({
   };
 
   const handleSaveAval = () => {
-    dispatch(saveAvalToServer({ id: p.id, conduta, freq, ing: ingestion }));
+    dispatch(saveAvalToServer({ id: p.id, conduta, freq, ing: ingestion, prof: userName }));
   };
 
   const handleConfirmAllergy = () => {
     dispatch(confirmAllergy({ id: p.id }));
   };
 
-  const handleAcknowledge = () => {
-    dispatch(
-      acknowledgePatient({
-        id: p.id,
-        hora: new Date().toLocaleTimeString("pt-BR", {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
-        prof: "Nutr. Silva",
-      })
-    );
+  const handleAcknowledge = async () => {
+    const result = await dispatch(acknowledgePatientToServer({ id: p.id, prof: userName }));
+    if (acknowledgePatientToServer.rejected.match(result)) {
+      message.error("Erro ao registrar reconhecimento.");
+    }
   };
 
   const handleAcknowledgeAlert = async (alertId: number) => {
@@ -302,6 +300,7 @@ export function PatientModal({
                     type="primary"
                     style={{ marginTop: 4, fontSize: 11 }}
                     disabled={!!p.dados_incompletos}
+                    loading={acknowledgeLoading}
                     onClick={handleAcknowledge}
                   >
                     Reconhecer

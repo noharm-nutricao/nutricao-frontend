@@ -69,6 +69,7 @@ export interface AcknowledgedEntry {
 interface NutritionalState {
   patients: NutritionalPatient[];
   acknowledged: Record<number, AcknowledgedEntry>;
+  acknowledgeLoading: Record<number, boolean>;
   loading: boolean;
   error: string | null;
   filtFila: string;
@@ -79,6 +80,7 @@ interface NutritionalState {
 const initialState: NutritionalState = {
   patients: [],
   acknowledged: {},
+  acknowledgeLoading: {},
   loading: false,
   error: null,
   filtFila: "",
@@ -279,13 +281,14 @@ export const saveGlimToServer = createAsyncThunk(
 export const saveAvalToServer = createAsyncThunk(
   "nutritional/saveAvalToServer",
   async (
-    { id, conduta, freq, ing, kcal, prot }: {
+    { id, conduta, freq, ing, kcal, prot, prof }: {
       id: number;
       conduta: string;
       freq: string;
       ing: number;
       kcal?: number | null;
       prot?: number | null;
+      prof: string;
     },
     thunkAPI
   ) => {
@@ -301,10 +304,35 @@ export const saveAvalToServer = createAsyncThunk(
         },
         setHeaders(),
       );
-      return { id, conduta, freq, ing };
+      return { id, conduta, freq, ing, prof };
     } catch (err) {
       const axiosErr = err as AxiosError<{ error?: string; message?: string }>;
       const msg = axiosErr.response?.data?.error ?? axiosErr.response?.data?.message ?? axiosErr.message ?? "Erro ao salvar avaliação";
+      return thunkAPI.rejectWithValue(msg);
+    }
+  }
+);
+
+export const acknowledgePatientToServer = createAsyncThunk(
+  "nutritional/acknowledgePatientToServer",
+  async (
+    { id, prof }: { id: number; prof: string },
+    thunkAPI
+  ) => {
+    try {
+      await api.nutritional.acknowledgePatient(id);
+      return {
+        id,
+        prof,
+        hora: new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
+      };
+    } catch (err) {
+      const axiosErr = err as AxiosError<{ error?: string; message?: string }>;
+      const msg =
+        axiosErr.response?.data?.error ??
+        axiosErr.response?.data?.message ??
+        axiosErr.message ??
+        "Erro ao reconhecer paciente";
       return thunkAPI.rejectWithValue(msg);
     }
   }
@@ -314,13 +342,6 @@ const nutritionalSlice = createSlice({
   name: "nutritional",
   initialState,
   reducers: {
-    acknowledgePatient(
-      state,
-      action: { payload: { id: number; hora: string; prof: string } }
-    ) {
-      const { id, hora, prof } = action.payload;
-      state.acknowledged[id] = { hora, prof };
-    },
     saveGlim(
       state,
       action: {
@@ -355,10 +376,10 @@ const nutritionalSlice = createSlice({
     saveAval(
       state,
       action: {
-        payload: { id: number; conduta: string; freq: string; ing: number };
+        payload: { id: number; conduta: string; freq: string; ing: number; prof: string };
       }
     ) {
-      const { id, conduta, freq, ing } = action.payload;
+      const { id, conduta, freq, ing, prof } = action.payload;
       const patient = state.patients.find((p) => p.id === id);
       if (patient) {
         patient.haval = 0;
@@ -370,7 +391,7 @@ const nutritionalSlice = createSlice({
         const min = String(now.getMinutes()).padStart(2, "0");
         patient.hist.unshift({
           h: `${dd}/${mm} ${hh}:${min}`,
-          p: "Nutr. Silva",
+          p: prof,
           c: conduta,
           freq,
           ing,
@@ -405,7 +426,7 @@ const nutritionalSlice = createSlice({
       state.filtFila = action.payload;
     },
     reset() {
-      return { ...initialState, acknowledged: {} };
+      return { ...initialState, acknowledged: {}, acknowledgeLoading: {} };
     },
   },
   extraReducers(builder) {
@@ -454,8 +475,19 @@ const nutritionalSlice = createSlice({
           patient.glim_diag = glim_diag;
         }
       })
+      .addCase(acknowledgePatientToServer.pending, (state, action) => {
+        state.acknowledgeLoading[action.meta.arg.id] = true;
+      })
+      .addCase(acknowledgePatientToServer.fulfilled, (state, action) => {
+        const { id, prof, hora } = action.payload;
+        state.acknowledged[id] = { hora, prof };
+        state.acknowledgeLoading[id] = false;
+      })
+      .addCase(acknowledgePatientToServer.rejected, (state, action) => {
+        state.acknowledgeLoading[action.meta.arg.id] = false;
+      })
       .addCase(saveAvalToServer.fulfilled, (state, action) => {
-        const { id, conduta, freq, ing } = action.payload;
+        const { id, conduta, freq, ing, prof } = action.payload;
         const patient = state.patients.find((p) => p.id === id);
         if (patient) {
           patient.haval = 0;
@@ -465,7 +497,7 @@ const nutritionalSlice = createSlice({
           const mm = String(now.getMonth() + 1).padStart(2, "0");
           const hh = String(now.getHours()).padStart(2, "0");
           const min = String(now.getMinutes()).padStart(2, "0");
-          patient.hist.unshift({ h: `${dd}/${mm} ${hh}:${min}`, p: "Nutr. Silva", c: conduta, freq, ing });
+          patient.hist.unshift({ h: `${dd}/${mm} ${hh}:${min}`, p: prof, c: conduta, freq, ing });
         }
       });
   },
@@ -476,7 +508,6 @@ export const {
   saveNrsNut,
   saveAval,
   confirmAllergy,
-  acknowledgePatient,
   markAlertAcknowledged,
   revertAlert,
   setFiltFila,

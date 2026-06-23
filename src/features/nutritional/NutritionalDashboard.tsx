@@ -7,6 +7,7 @@ import {
   Segmented,
   Spin,
   Tooltip,
+  message,
 } from "antd";
 import {
   AppstoreOutlined,
@@ -23,7 +24,7 @@ import Feature from "src/models/Feature";
 import { PageHeader } from "src/styles/PageHeader.style";
 import { PageCard } from "styles/Utils.style";
 import {
-  acknowledgePatient,
+  acknowledgePatientToServer,
   fetchPatients,
   setFiltFila as setFiltFilaAction,
   NutritionalPatient,
@@ -58,9 +59,10 @@ export function NutritionalDashboard() {
   const fila3Patients = useAppSelector(selectFila3);
   const fila4Patients = useAppSelector(selectFila4);
   const fila5Patients = useAppSelector(selectFila5);
-  const { patients, acknowledged, loading, error } = useAppSelector(
+  const { patients, acknowledged, acknowledgeLoading, loading, error } = useAppSelector(
     (state) => state.nutritional
   );
+  const userName = useAppSelector((state: any) => state.user.account.userName); // eslint-disable-line @typescript-eslint/no-explicit-any
 
   const [viewMode, setViewMode] = useState<"grid" | "lista">("grid");
   const [filtAla, setFiltAla] = useState("all");
@@ -113,17 +115,11 @@ export function NutritionalDashboard() {
     [patients, acknowledged]
   );
 
-  const handleAcknowledge = (id: number) => {
-    dispatch(
-      acknowledgePatient({
-        id,
-        hora: new Date().toLocaleTimeString("pt-BR", {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
-        prof: "Nutr. Silva",
-      })
-    );
+  const handleAcknowledge = async (id: number) => {
+    const result = await dispatch(acknowledgePatientToServer({ id, prof: userName }));
+    if (acknowledgePatientToServer.rejected.match(result)) {
+      message.error("Erro ao registrar reconhecimento.");
+    }
   };
 
   const handleOpenTab = (patient: NutritionalPatient, tab: string) => {
@@ -527,6 +523,7 @@ export function NutritionalDashboard() {
                                   size="small"
                                   type="primary"
                                   danger={p.sev === "cr" || p.sev === "al"}
+                                  loading={!!acknowledgeLoading[p.id]}
                                   onClick={() => handleAcknowledge(p.id)}
                                   style={{ fontSize: 11 }}
                                 >
