@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { selectFila3, selectFila4 } from "../nutritionalSelectors";
+import { selectFila2, selectFila3, selectFila4 } from "../nutritionalSelectors";
 import { isFila3, isFila4, matchFila } from "features/nutritional/nutritionalUtils";
 import type { NutritionalPatient } from "features/nutritional/NutritionalSlice";
 
@@ -24,6 +24,7 @@ function makePatient(overrides: Partial<NutritionalPatient> = {}): NutritionalPa
     peso: "",
     imc: null,
     haval: 0,
+    freq_horas: null,
     glim_diag: null,
     glim_fen: [],
     glim_etiol: [],
@@ -32,6 +33,9 @@ function makePatient(overrides: Partial<NutritionalPatient> = {}): NutritionalPa
     alergia: null,
     alOk: true,
     d7: false,
+    triagem_status: null,
+    triagem_at: null,
+    data_internacao: null,
     hist: [],
     ...overrides,
   };
@@ -60,7 +64,7 @@ describe("isFila3", () => {
       inst: [
         { id: 1, t: "lab",  d: "A", ack: false, sev: "md" },
         { id: 2, t: "clin", d: "B", ack: false, sev: "bx" },
-        { id: 3, t: "rx",   d: "C", ack: false },
+        { id: 3, t: "rx",   d: "C", ack: false, sev: "md" as const },
       ],
     });
     expect(isFila3(p)).toBe(true);
@@ -69,10 +73,10 @@ describe("isFila3", () => {
   it("retorna true quando inst.length > 3", () => {
     const p = makePatient({
       inst: [
-        { id: 1, t: "lab", d: "A", ack: false },
-        { id: 2, t: "lab", d: "B", ack: false },
-        { id: 3, t: "lab", d: "C", ack: false },
-        { id: 4, t: "lab", d: "D", ack: false },
+        { id: 1, t: "lab", d: "A", ack: false, sev: "md" as const },
+        { id: 2, t: "lab", d: "B", ack: false, sev: "md" as const },
+        { id: 3, t: "lab", d: "C", ack: false, sev: "md" as const },
+        { id: 4, t: "lab", d: "D", ack: false, sev: "md" as const },
       ],
     });
     expect(isFila3(p)).toBe(true);
@@ -130,11 +134,35 @@ describe("selectFila3", () => {
     const p1 = makePatient({ id: 1, inst: [{ id: 1, t: "lab", d: "X", ack: false, sev: "cr" }] });
     const p2 = makePatient({ id: 2, inst: [] });
     const p3 = makePatient({ id: 3, inst: [
-      { id: 2, t: "lab",  d: "Y", ack: false },
-      { id: 3, t: "lab",  d: "Z", ack: false },
-      { id: 4, t: "clin", d: "W", ack: false },
+      { id: 2, t: "lab",  d: "Y", ack: false, sev: "md" as const },
+      { id: 3, t: "lab",  d: "Z", ack: false, sev: "md" as const },
+      { id: 4, t: "clin", d: "W", ack: false, sev: "md" as const },
     ]});
     expect(selectFila3(makeState([p1, p2, p3])).map((p) => p.id)).toEqual([1, 3]);
+  });
+});
+
+// ─── selectFila2 (selector Redux) ────────────────────────────────────────────
+
+describe("selectFila2", () => {
+  it("inclui quando freq_horas=48 e haval=40 (>= 48*0.8)", () => {
+    const p = makePatient({ freq_horas: 48, haval: 40 });
+    expect(selectFila2(makeState([p]))).toHaveLength(1);
+  });
+
+  it("exclui quando freq_horas=48 e haval=30 (< 48*0.8)", () => {
+    const p = makePatient({ freq_horas: 48, haval: 30 });
+    expect(selectFila2(makeState([p]))).toHaveLength(0);
+  });
+
+  it("inclui quando freq_horas=null e haval=15 (fallback 12-24)", () => {
+    const p = makePatient({ freq_horas: null, haval: 15 });
+    expect(selectFila2(makeState([p]))).toHaveLength(1);
+  });
+
+  it("exclui quando freq_horas=null e haval=30 (fallback exclui)", () => {
+    const p = makePatient({ freq_horas: null, haval: 30 });
+    expect(selectFila2(makeState([p]))).toHaveLength(0);
   });
 });
 

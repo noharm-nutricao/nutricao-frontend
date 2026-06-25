@@ -44,6 +44,11 @@ export const ALA_COLORS: Record<AlaType, string> = {
   C: "#80cbc4",
 };
 
+export const ALERGIA_BTNS = [
+  { key: "com",      label: "Com alergia",   color: "#cf1322" },
+  { key: "pendente", label: "Alg. pendente", color: "#a8071a" },
+];
+
 export const ALA_CONFIG: Record<
   AlaType,
   { nome: string; color: string; total: number; protocol: string }
@@ -94,6 +99,13 @@ export const GLIM_ETIOL_LABEL: Record<string, string> = {
   doenca_cronica:   "Doença crônica",       // chave retornada pela API
 };
 
+export const INST_STYLE: Record<SeverityType, { bg: string; color: string; border: string }> = {
+  cr: { bg: "#fcebeb", color: "#a32d2d", border: "#f09595" },
+  al: { bg: "#fdf3dc", color: "#b7770d", border: "#fac775" },
+  md: { bg: "#f0eeff", color: "#3c3489", border: "#b39ddb" },
+  bx: { bg: "#f6ffed", color: "#389e0d", border: "#b7eb8f" },
+};
+
 // ── Fila predicates — single source of truth ────────────────────────────────
 // Used by both the Redux selectors and matchFila; change criteria in one place.
 
@@ -101,7 +113,12 @@ export function isFila1(p: Pick<NutritionalPatient, "sev" | "haval">): boolean {
   return (p.sev === "cr" || p.sev === "al") && p.haval > 18;
 }
 
-export function isFila2(p: Pick<NutritionalPatient, "haval">): boolean {
+export function isFila2(p: Pick<NutritionalPatient, "haval" | "freq_horas">): boolean {
+  if (p.haval === null || p.haval === 0) return false;
+  if ((p as any).freq_horas != null) {
+    return p.haval >= (p as any).freq_horas * 0.8;
+  }
+  // fallback: janela fixa 12-24h
   return p.haval >= 12 && p.haval <= 24;
 }
 
