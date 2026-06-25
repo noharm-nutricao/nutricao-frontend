@@ -70,7 +70,7 @@ export function PatientCard({
     : null;
 
   return (
-    <Card $sev={maxInstSev != null && SEV_ORDER[maxInstSev] > SEV_ORDER[p.sev] ? maxInstSev : p.sev} $atend={isAtend}>
+    <Card $sev={maxInstSev != null && SEV_ORDER[maxInstSev] > SEV_ORDER[p.sev ?? "bx"] ? maxInstSev : p.sev} $atend={isAtend}>
       <CardBody onClick={onClick}>
         <CardTop>
           <BedLabel>{p.leito}</BedLabel>
