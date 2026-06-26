@@ -19,6 +19,7 @@ export interface TriagemIndicatorsData {
 interface NutritionalAPI {
   getPatients: (params?: { setor?: number; ala?: string }) => any;
   saveNrsNut: (nratendimento: number, data: NrsNutPayload) => any;
+  saveNrsA: (nratendimento: number, data: { nut: number }) => any;
   saveGlim: (nratendimento: number, data: GlimPayload) => any;
   saveAval: (nratendimento: number, data: AvalPayload) => any;
   acknowledgePatient: (nratendimento: number) => any;
@@ -62,6 +63,20 @@ api.nutritional.getPatients = (params?: { setor?: number; ala?: string }) =>
 api.nutritional.saveNrsNut = (nratendimento: number, data: NrsNutPayload) =>
   instance.put(
     `/nutritional/patients/${nratendimento}/nrs-nut`,
+    data,
+    setHeaders(),
+  );
+
+/**
+ * Saves manual Component A (nutritional status) of NRS-2002.
+ * Returns recalculated NRS totals and updated classification.
+ * @param nratendimento - Patient admission number
+ * @param data - Payload with nut score (0–3)
+ * @returns Promise with updated NRS breakdown and classification
+ */
+api.nutritional.saveNrsA = (nratendimento: number, data: { nut: number }) =>
+  instance.put(
+    `/nutritional/patients/${nratendimento}/nrs-a`,
     data,
     setHeaders(),
   );

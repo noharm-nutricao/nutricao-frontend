@@ -25,6 +25,7 @@ import {
   AcknowledgedEntry,
   GlimDiag,
   saveNrsNut,
+  saveNrsNutA,
   confirmAllergy,
   acknowledgePatient,
   markAlertAcknowledged,
@@ -207,8 +208,13 @@ export function PatientModal({
     }
   };
 
-  const handleSaveNrs = () => {
-    dispatch(saveNrsNut({ id: p.id, nut: nrsA }));
+  const handleSaveNrs = async () => {
+    const result = await dispatch(saveNrsNutA({ id: p.id, nut: nrsA }));
+    if (saveNrsNutA.fulfilled.match(result)) {
+      message.success("NRS-2002 salvo com sucesso.");
+    } else {
+      message.error(`Erro ao salvar NRS-2002: ${(result as any).payload ?? "erro desconhecido"}`); // eslint-disable-line @typescript-eslint/no-explicit-any
+    }
   };
 
   const handleSaveAval = async () => {
