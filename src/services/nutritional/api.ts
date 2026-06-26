@@ -1,6 +1,21 @@
 import apiModule, { instance, setHeaders } from '../api';
 
 
+export interface TriagemIndicatorsParams {
+  setor?: number;
+  ala?: string;
+  start_date?: string;
+  end_date?: string;
+}
+
+export interface TriagemIndicatorsData {
+  percentual: number;
+  total: number;
+  verde: number;
+  vermelho: number;
+  cinza: number;
+}
+
 interface NutritionalAPI {
   getPatients: (params?: { setor?: number; ala?: string }) => any;
   saveNrsNut: (nratendimento: number, data: NrsNutPayload) => any;
@@ -9,6 +24,7 @@ interface NutritionalAPI {
   acknowledgePatient: (nratendimento: number) => any;
   getAlerts: (nratendimento: number) => any;
   acknowledgeAlert: (nratendimento: number, alertId: number) => any;
+  getTriagemIndicators: (params?: TriagemIndicatorsParams) => any;
 };
 
 
@@ -115,6 +131,12 @@ export interface AvalPayload {
   meta_prot?: number;
 };
 
+
+api.nutritional.getTriagemIndicators = (params?: TriagemIndicatorsParams) =>
+  instance.get('/nutritional/triagem-indicators', {
+    params,
+    ...setHeaders(),
+  });
 
 api.nutritional.getAlerts = (nratendimento: number) =>
   instance.get(`/nutritional/patients/${nratendimento}/alerts`, setHeaders());
