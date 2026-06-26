@@ -34,6 +34,7 @@ import { NutritionalFilter } from "./components/NutritionalFIlter/NutritionalFil
 import { PatientCard } from "./components/PatientCard/PatientCard";
 import { PatientModal } from "./components/PatientModal/PatientModal";
 import { ChumleaCalculator } from "./components/ChumleaCalculator/ChumleaCalculator";
+import { TriagemIndicatorsBar } from "./components/TriagemIndicators/TriagemIndicatorsBar";
 import {
   REFRESH_INTERVAL,
   SEV_CONFIG,
@@ -225,6 +226,8 @@ export function NutritionalDashboard() {
         onFilaChange={(val) => dispatch(setFiltFilaAction(val))}
         onSortToggle={() => setSortAsc((v) => !v)}
       />
+
+      <TriagemIndicatorsBar ala={filtAla} />
 
       {/* Summary bar */}
       <SummaryBar>
