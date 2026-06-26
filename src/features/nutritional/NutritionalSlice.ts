@@ -1,6 +1,7 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import { AxiosError } from "axios";
-import api, { instance, setHeaders } from "services/api";
+import api from "services/nutritional/api";
+import { instance, setHeaders } from "services/api";
 
 export type AlaType = "UTI" | "B" | "C";
 export type SeverityType = "cr" | "al" | "md" | "bx";

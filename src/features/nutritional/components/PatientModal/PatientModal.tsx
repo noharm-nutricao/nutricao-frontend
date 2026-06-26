@@ -24,7 +24,6 @@ import {
   NutritionalPatient,
   AcknowledgedEntry,
   GlimDiag,
-  saveNrsNut,
   saveNrsNutA,
   confirmAllergy,
   acknowledgePatient,
