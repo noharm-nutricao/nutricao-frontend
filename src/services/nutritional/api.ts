@@ -133,7 +133,7 @@ export interface AvalPayload {
 
 
 api.nutritional.getTriagemIndicators = (params?: TriagemIndicatorsParams) =>
-  instance.get('/nutritional/triagem-indicators', {
+  instance.get('/nutritional/indicators', {
     params,
     ...setHeaders(),
   });
