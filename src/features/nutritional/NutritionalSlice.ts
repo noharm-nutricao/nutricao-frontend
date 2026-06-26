@@ -1,6 +1,7 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import { AxiosError } from "axios";
-import api, { instance, setHeaders } from "services/api";
+import api from "services/nutritional/api";
+import { instance, setHeaders } from "services/api";
 
 export type AlaType = "UTI" | "B" | "C";
 export type SeverityType = "cr" | "al" | "md" | "bx";
@@ -193,6 +194,25 @@ export const saveMnutricManual = createAsyncThunk(
         axiosErr.message ??
         "Erro ao salvar APACHE/SOFA";
       return thunkAPI.rejectWithValue(msg);
+    }
+  }
+);
+
+export const saveNrsNutA = createAsyncThunk(
+  "nutritional/saveNrsNutA",
+  async ({ id, nut }: { id: number; nut: number }, thunkAPI) => {
+    try {
+      const response = await api.nutritional.saveNrsA(id, { nut });
+      const d = response.data?.data ?? response.data ?? {};
+      return { id, nrs_nut: d.nrs_nut, nrs_doenca: d.nrs_doenca, nrs_idade: d.nrs_idade, nrs_total: d.nrs_total, classificacao: d.classificacao, nrs_completo: d.nrs_completo };
+    } catch (err) {
+      const axiosErr = err as AxiosError<{ error?: string; message?: string }>;
+      return thunkAPI.rejectWithValue(
+        axiosErr.response?.data?.error ??
+        axiosErr.response?.data?.message ??
+        axiosErr.message ??
+        "Erro ao salvar NRS-A"
+      );
     }
   }
 );
@@ -453,6 +473,19 @@ const nutritionalSlice = createSlice({
           patient.sev = campo1.classificacao ?? patient.sev;
           patient.mn_dims = campo1.mn_dims ?? patient.mn_dims;
           patient.nrs_completo = campo1.nrs_completo ?? patient.nrs_completo;
+        }
+      })
+      .addCase(saveNrsNutA.fulfilled, (state, action) => {
+        const { id, nrs_nut, nrs_doenca, nrs_idade, nrs_total, classificacao, nrs_completo } = action.payload;
+        const patient = state.patients.find((p) => p.id === id);
+        if (patient) {
+          patient.nrs_dims.nut = nrs_nut ?? patient.nrs_dims.nut;
+          patient.nrs_dims.doenca = nrs_doenca ?? patient.nrs_dims.doenca;
+          patient.nrs_dims.idade = nrs_idade ?? patient.nrs_dims.idade;
+          patient.nrs = nrs_total ?? patient.nrs;
+          patient.sev = classificacao ?? patient.sev;
+          patient.nrs_completo = nrs_completo;
+          if (nrs_completo) patient.triagem_status = "finalizada";
         }
       })
       .addCase(saveGlimToServer.fulfilled, (state, action) => {
