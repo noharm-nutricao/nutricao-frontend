@@ -29,7 +29,6 @@ import {
   setFiltFila as setFiltFilaAction,
   NutritionalPatient,
   AlaType,
-  AcknowledgedEntry,
 } from "./NutritionalSlice";
 import { NutritionalFilter } from "./components/NutritionalFIlter/NutritionalFilter";
 import { PatientCard } from "./components/PatientCard/PatientCard";
@@ -45,6 +44,7 @@ import {
   getPatientScore,
   scoreColorMnutric,
   scoreColorNrs,
+  matchFila,
 } from "./nutritionalUtils";
 import { SummaryBar, SummaryItem, SummaryRight, WardSection, WardHeader, WardLeft, WardDot, WardName, WardSub, BedGrid, EmptyBed, ListCard, ListCardBody, ListCell, ListCellLabel, InlineBadge, ListCardFooter } from "./styles";
 
@@ -108,7 +108,7 @@ export function NutritionalDashboard() {
       list = list.filter((p) => p.alergia !== null && !p.alOk);
     }
     if (filtFila) {
-      list = list.filter((p) => matchFila(p, filtFila, acknowledged));
+      list = list.filter((p) => matchFila(p, filtFila));
     }
     return list.sort((a, b) =>
       sortAsc
@@ -136,28 +136,6 @@ export function NutritionalDashboard() {
     com: patients.filter((p: NutritionalPatient) => p.alergia !== null).length,
     pendente: patients.filter((p: NutritionalPatient) => p.alergia !== null && !p.alOk).length,
   }), [patients]);
-
-  function matchFila(
-    p: NutritionalPatient,
-    filtFila: string,
-    _acknowledged: Record<number, AcknowledgedEntry>
-  ): boolean {
-    if (!filtFila || filtFila === "all") return true;
-    if (filtFila === "FILA1") return (p.sev === "cr" || p.sev === "al") && p.haval > 18;
-    if (filtFila === "FILA2") {
-      if (p.haval === null || p.haval === 0) return false;
-      // freq_horas = 48, haval = 40 (>= 48*0.8=38.4) → Fila 2 inclui
-      // freq_horas = 48, haval = 30 (< 38.4) → Fila 2 exclui
-      // freq_horas = null, haval = 15 → fallback inclui (12–24h)
-      // freq_horas = null, haval = 30 → fallback exclui
-      if ((p as any).freq_horas != null) {
-        return p.haval >= (p as any).freq_horas * 0.8;
-      }
-      return p.haval >= 12 && p.haval <= 24;
-    }
-    if (filtFila === "FILA5") return p.d7 === true;
-    return true;
-  };
 
   const handleAcknowledge = (id: number) => {
     dispatch(
