@@ -1,6 +1,5 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import { AxiosError } from "axios";
-import api from "services/nutritional/api";
 import { instance, setHeaders } from "services/api";
 
 export type AlaType = "UTI" | "B" | "C";
@@ -159,7 +158,7 @@ export const fetchPatients = createAsyncThunk(
   "nutritional/fetchPatients",
   async (params: { setor?: number } = {}, thunkAPI) => {
     try {
-      const response = await api.nutritional.getPatients(params);
+      const response = await instance.get('/nutritional/patients', { params, ...setHeaders() });
       const payload = response.data;
       const rawList: any[] = Array.isArray(payload) ? payload : payload?.data ?? []; // eslint-disable-line @typescript-eslint/no-explicit-any
       return rawList.map(normalizeApiPatient);
@@ -183,7 +182,7 @@ export const saveMnutricManual = createAsyncThunk(
     thunkAPI
   ) => {
     try {
-      const response = await api.nutritional.saveNrsNut(id, { apache_ii, sofa });
+      const response = await instance.put(`/nutritional/patients/${id}/nrs-nut`, { apache_ii, sofa }, setHeaders());
       const campo1 = response.data?.campo1 ?? response.data ?? {};
       return { id, campo1 };
     } catch (err) {
@@ -202,7 +201,7 @@ export const saveNrsNutA = createAsyncThunk(
   "nutritional/saveNrsNutA",
   async ({ id, nut }: { id: number; nut: number }, thunkAPI) => {
     try {
-      const response = await api.nutritional.saveNrsA(id, { nut });
+      const response = await instance.put(`/nutritional/patients/${id}/nrs-a`, { nut }, setHeaders());
       const d = response.data?.data ?? response.data ?? {};
       return { id, nrs_nut: d.nrs_nut, nrs_doenca: d.nrs_doenca, nrs_idade: d.nrs_idade, nrs_total: d.nrs_total, classificacao: d.classificacao, nrs_completo: d.nrs_completo };
     } catch (err) {
@@ -221,7 +220,7 @@ export const fetchAlerts = createAsyncThunk(
   "nutritional/fetchAlerts",
   async (patientId: number, thunkAPI) => {
     try {
-      const response = await api.nutritional.getAlerts(patientId);
+      const response = await instance.get(`/nutritional/patients/${patientId}/alerts`, setHeaders());
       const raw: any[] = Array.isArray(response.data) ? response.data : response.data?.data ?? []; // eslint-disable-line @typescript-eslint/no-explicit-any
       return {
         patientId,
@@ -239,7 +238,7 @@ export const acknowledgeAlert = createAsyncThunk(
   "nutritional/acknowledgeAlert",
   async ({ patientId, alertId }: { patientId: number; alertId: number }, thunkAPI) => {
     try {
-      await api.nutritional.acknowledgeAlert(patientId, alertId);
+      await instance.post(`/nutritional/patients/${patientId}/alerts/${alertId}/acknowledge`, {}, setHeaders());
       return { patientId, alertId };
     } catch (err) {
       const axiosErr = err as AxiosError<{ error?: string; message?: string }>;
