@@ -182,7 +182,7 @@ export const saveMnutricManual = createAsyncThunk(
     thunkAPI
   ) => {
     try {
-      const response = await instance.put(`/nutritional/patients/${id}/nrs-nut`, { apache_ii, sofa }, setHeaders());
+      const response = await instance.put(`/nutritional/patients/${id}/mnutric-manual`, { apache_ii, sofa }, setHeaders());
       const campo1 = response.data?.campo1 ?? response.data ?? {};
       return { id, campo1 };
     } catch (err) {
